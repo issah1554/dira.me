@@ -16,13 +16,6 @@ export interface AccountCardProps {
     onDelete?: () => void;
 }
 
-const formatBalance = (amount: number, currency = "TZS") =>
-    new Intl.NumberFormat(undefined, {
-        style: "currency",
-        currency,
-        maximumFractionDigits: 2,
-    }).format(amount);
-
 const statusColors: Record<string, string> = {
     active: "bg-green-100 text-green-700 border-green-300",
     inactive: "bg-main-100 text-main-700 border-main-300",

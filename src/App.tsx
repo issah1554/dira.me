@@ -25,7 +25,7 @@ import { AccountsGridPage } from "./features/finance/pages/AccountsPage2";
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
 
         <ThemeProvider>
