@@ -14,7 +14,7 @@ export default function AuthLayout() {
                 </Link>
 
                 <img
-                    src="/payment-cover.png"
+                    src={`${import.meta.env.BASE_URL}payment-cover.png`}
                     alt="Auth Cover"
                     className="w-full max-w-137.5 p-10 object-contain"
                 />
