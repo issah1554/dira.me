@@ -423,7 +423,7 @@ export default function LedgerPage() {
                     <Loader size={40} />
                 </div>
             ) : filteredTransactions.length === 0 ? (
-                <div className="text-center py-16 border-2 border-dashed border-main-300 rounded-lg">
+                <div className="text-center py-16 border border-main-300 bg-main-200/40 rounded-lg">
                     <i className="bi bi-journal-text text-4xl text-main-400 mb-3" />
                     <h4 className="text-lg font-medium text-main-700 mb-1">No transactions found</h4>
                     <p className="text-sm text-main-500 mb-4">

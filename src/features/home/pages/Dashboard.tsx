@@ -112,7 +112,7 @@ export function Dashboard() {
                     </div>
 
                     {transactions.length === 0 ? (
-                        <div className="text-center py-12 border border-dashed border-main-300 rounded-md">
+                        <div className="text-center py-12 border border-main-300 bg-main-100/50 rounded-md">
                             <i className="bi bi-journal-x text-3xl text-main-400 mb-2" />
                             <p className="text-sm text-main-500 mb-3">No transactions recorded yet</p>
                             <Link

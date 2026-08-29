@@ -238,7 +238,7 @@ export default function Accounts() {
             </div>
 
             {accounts.length === 0 && !loading && (
-                <div className="text-center py-12 border-2 border-dashed border-main-300 rounded-lg">
+                <div className="text-center py-12 border border-main-300 bg-main-200/40 rounded-lg">
                     <i className="bi bi-wallet2 text-4xl text-main-400 mb-4" />
                     <h4 className="text-lg font-medium text-main-600 mb-2">No accounts yet</h4>
                     <p className="text-main-500 mb-4">Start by adding your first account</p>
