@@ -186,9 +186,9 @@ export default function ObligationsPage() {
                     </select>
 
                     <select className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100">
-                        <option value="">All Type</option>
-                        <option value="dr">Payables (DR)</option>
-                        <option value="cr">Receivables (CR)</option>
+                        <option value="">All Types</option>
+                        <option value="dr">Cash Out (Payables)</option>
+                        <option value="cr">Cash In (Receivables)</option>
                     </select>
 
                     <div className="flex items-center gap-1.5 border border-main-300 rounded px-2 py-1 bg-main-100">

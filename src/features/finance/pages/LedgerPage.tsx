@@ -15,11 +15,20 @@ import Loader from "../../../components/ui/Loaders";
 ======================= */
 
 export default function LedgerPage() {
-    const { data: transactions, loading, create: createTransaction, remove: removeTransaction } = useTransactions();
+    const {
+        data: transactions,
+        loading,
+        create: createTransaction,
+        update: updateTransaction,
+        remove: removeTransaction,
+    } = useTransactions();
     const { accounts } = useAccounts();
 
     const [open, setOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+
     const [filterStatus, setFilterStatus] = useState("");
+    const [filterType, setFilterType] = useState("");
     const [filterAccount, setFilterAccount] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
@@ -27,7 +36,7 @@ export default function LedgerPage() {
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
         amount: "",
-        dc: "dr" as "dr" | "cr",
+        dc: "cr" as "dr" | "cr", // Default to Cash In
         account: "",
         category: "General",
         notes: "",
@@ -35,17 +44,31 @@ export default function LedgerPage() {
 
     const closeModal = () => {
         setOpen(false);
+        setEditingId(null);
         setFormData({
             date: new Date().toISOString().split("T")[0],
             amount: "",
-            dc: "dr",
+            dc: "cr",
             account: "",
             category: "General",
             notes: "",
         });
     };
 
-    const handleCreateEntry = async (e: React.FormEvent) => {
+    const handleOpenEdit = (tx: Transaction) => {
+        setEditingId(tx.id);
+        setFormData({
+            date: tx.date ? tx.date.split("T")[0] : new Date().toISOString().split("T")[0],
+            amount: String(tx.amount),
+            dc: tx.dc,
+            account: tx.account,
+            category: tx.category || "General",
+            notes: tx.notes || "",
+        });
+        setOpen(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const amt = parseFloat(formData.amount);
         if (isNaN(amt) || amt <= 0) {
@@ -57,15 +80,21 @@ export default function LedgerPage() {
             return;
         }
 
-        await createTransaction({
+        const payload = {
             date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
             amount: amt,
             dc: formData.dc,
             account: formData.account,
             category: formData.category || "General",
             notes: formData.notes,
-            status: "completed",
-        });
+            status: "completed" as const,
+        };
+
+        if (editingId) {
+            await updateTransaction(editingId, payload);
+        } else {
+            await createTransaction(payload);
+        }
 
         closeModal();
     };
@@ -80,6 +109,7 @@ export default function LedgerPage() {
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
             if (filterStatus && tx.status !== filterStatus) return false;
+            if (filterType && tx.dc !== filterType) return false;
             if (filterAccount && tx.account !== filterAccount) return false;
             if (filterDateFrom) {
                 const txDate = tx.date.split("T")[0];
@@ -91,7 +121,7 @@ export default function LedgerPage() {
             }
             return true;
         });
-    }, [transactions, filterStatus, filterAccount, filterDateFrom, filterDateTo]);
+    }, [transactions, filterStatus, filterType, filterAccount, filterDateFrom, filterDateTo]);
 
     /* =======================
        Columns
@@ -135,15 +165,34 @@ export default function LedgerPage() {
         },
 
         {
+            key: "dc",
+            header: "Type",
+            sortable: true,
+            priority: 9,
+            render: row => (
+                <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        row.dc === "cr"
+                            ? "bg-green-100 text-green-700 border border-green-200"
+                            : "bg-red-100 text-red-700 border border-red-200"
+                    }`}
+                >
+                    <i className={`bi ${row.dc === "cr" ? "bi-arrow-down-left" : "bi-arrow-up-right"}`} />
+                    {row.dc === "cr" ? "Cash In" : "Cash Out"}
+                </span>
+            ),
+        },
+
+        {
             key: "amount",
             header: "Amount",
             sortable: true,
             priority: 10,
             render: row => (
                 <span
-                    className={`font-semibold ${row.dc === "dr" ? "text-red-600" : "text-green-600"}`}
+                    className={`font-semibold ${row.dc === "cr" ? "text-green-600" : "text-red-600"}`}
                 >
-                    {row.amount.toLocaleString()} TZS
+                    {row.dc === "cr" ? "+" : "-"}{row.amount.toLocaleString()} TZS
                 </span>
             ),
         },
@@ -187,12 +236,22 @@ export default function LedgerPage() {
             key: "id",
             header: "Actions",
             render: row => (
-                <div className="flex gap-2">
+                <div className="flex items-center gap-1.5">
+                    <Button
+                        size="xs"
+                        color="primary"
+                        variant="outline"
+                        onClick={() => handleOpenEdit(row)}
+                        title="Edit transaction"
+                    >
+                        <i className="bi bi-pencil mr-1" /> Edit
+                    </Button>
                     <Button
                         size="xs"
                         color="error"
                         variant="outline"
                         onClick={() => handleRemove(row.id)}
+                        title="Remove transaction"
                     >
                         <i className="bi bi-trash mr-1" /> Remove
                     </Button>
@@ -225,6 +284,16 @@ export default function LedgerPage() {
                         <option value="completed">Completed</option>
                         <option value="pending">Pending</option>
                         <option value="failed">Failed</option>
+                    </select>
+
+                    <select
+                        value={filterType}
+                        onChange={e => setFilterType(e.target.value)}
+                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
+                    >
+                        <option value="">All Types</option>
+                        <option value="cr">Cash In (+)</option>
+                        <option value="dr">Cash Out (-)</option>
                     </select>
 
                     <select
@@ -272,27 +341,38 @@ export default function LedgerPage() {
                     <Button
                         color="primary"
                         size="sm"
-                        onClick={() => setOpen(true)}
+                        onClick={() => {
+                            setEditingId(null);
+                            setFormData({
+                                date: new Date().toISOString().split("T")[0],
+                                amount: "",
+                                dc: "cr",
+                                account: "",
+                                category: "General",
+                                notes: "",
+                            });
+                            setOpen(true);
+                        }}
                     >
                         <i className="bi bi-plus-lg" /> Add Entry
                     </Button>
                 </div>
             </div>
 
-            {/* Add Ledger Entry Modal */}
+            {/* Add / Edit Ledger Entry Modal */}
             <Modal open={open} onClose={closeModal} size="md" position="center" blur>
                 <div className="bg-main-200 rounded-lg shadow-xl">
                     <div className="flex items-center justify-between px-6 py-4">
                         <h3 className="text-lg text-main font-semibold flex items-center gap-2">
-                            <i className="bi bi-journal-plus" />
-                            Add Ledger Entry
+                            <i className={editingId ? "bi bi-pencil-square" : "bi bi-journal-plus"} />
+                            {editingId ? "Edit Transaction" : "Add Ledger Entry"}
                         </h3>
                         <button onClick={closeModal}>
                             <i className="bi bi-x-lg" />
                         </button>
                     </div>
 
-                    <form onSubmit={handleCreateEntry} className="p-6 space-y-4">
+                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
                         <DatePicker
                             label="Date"
                             labelBgColor="bg-main-200"
@@ -304,42 +384,13 @@ export default function LedgerPage() {
                             showTodayButton
                         />
 
-                        <TextInput
-                            label="Amount"
-                            labelBgColor="bg-main-200"
-                            type="number"
-                            value={formData.amount}
-                            onChange={e => setFormData(p => ({ ...p, amount: e.target.value }))}
-                            required
-                            color="primary"
-                            size="md"
-                        />
-
-                        <div className="flex gap-2">
+                        {/* Cash In vs Cash Out Selection */}
+                        <div className="flex gap-3">
                             <label
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border text-sm font-medium
-                                ${formData.dc === "dr"
-                                    ? "bg-red-200 border-2 border-red-300 text-red-600"
-                                    : "border-main-300 text-main-600 hover:bg-danger-100"}
-                                `}
-                            >
-                                <input
-                                    type="radio"
-                                    name="dc"
-                                    value="dr"
-                                    className="hidden"
-                                    checked={formData.dc === "dr"}
-                                    onChange={() => setFormData(p => ({ ...p, dc: "dr" }))}
-                                />
-                                <i className="bi bi-dash-circle" />
-                                Debit
-                            </label>
-
-                            <label
-                                className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border text-sm font-medium
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
                                 ${formData.dc === "cr"
-                                    ? "bg-green-200 border-2 border-green-300 text-green-600"
-                                    : "border-main-300 text-green-600 hover:bg-green-100"}
+                                    ? "bg-green-100 dark:bg-green-950/40 border-green-500 text-green-700 dark:text-green-300 ring-2 ring-green-500/20"
+                                    : "border-main-300 text-main-600 hover:bg-main-100"}
                                 `}
                             >
                                 <input
@@ -350,10 +401,40 @@ export default function LedgerPage() {
                                     checked={formData.dc === "cr"}
                                     onChange={() => setFormData(p => ({ ...p, dc: "cr" }))}
                                 />
-                                <i className="bi bi-plus-circle" />
-                                Credit
+                                <i className="bi bi-arrow-down-left-circle-fill text-green-600" />
+                                Cash In
+                            </label>
+
+                            <label
+                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
+                                ${formData.dc === "dr"
+                                    ? "bg-red-100 dark:bg-red-950/40 border-red-500 text-red-700 dark:text-red-300 ring-2 ring-red-500/20"
+                                    : "border-main-300 text-main-600 hover:bg-main-100"}
+                                `}
+                            >
+                                <input
+                                    type="radio"
+                                    name="dc"
+                                    value="dr"
+                                    className="hidden"
+                                    checked={formData.dc === "dr"}
+                                    onChange={() => setFormData(p => ({ ...p, dc: "dr" }))}
+                                />
+                                <i className="bi bi-arrow-up-right-circle-fill text-red-600" />
+                                Cash Out
                             </label>
                         </div>
+
+                        <TextInput
+                            label="Amount"
+                            labelBgColor="bg-main-200"
+                            type="number"
+                            value={formData.amount}
+                            onChange={e => setFormData(p => ({ ...p, amount: e.target.value }))}
+                            required
+                            color="primary"
+                            size="md"
+                        />
 
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
@@ -410,7 +491,7 @@ export default function LedgerPage() {
                                 Cancel
                             </Button>
                             <Button size="sm" color="primary" type="submit">
-                                Save Entry
+                                {editingId ? "Save Changes" : "Save Entry"}
                             </Button>
                         </div>
                     </form>
@@ -431,7 +512,14 @@ export default function LedgerPage() {
                             ? "You haven't recorded any ledger transactions yet."
                             : "No transactions match the selected filters."}
                     </p>
-                    <Button color="primary" size="md" onClick={() => setOpen(true)}>
+                    <Button
+                        color="primary"
+                        size="md"
+                        onClick={() => {
+                            setEditingId(null);
+                            setOpen(true);
+                        }}
+                    >
                         <i className="bi bi-plus-lg mr-2" /> Add Your First Entry
                     </Button>
                 </div>
