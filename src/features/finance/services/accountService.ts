@@ -91,11 +91,11 @@ const computeAccountBalances = (accounts: AccountRow[], transactions: any[]): Ac
         accountTxList.forEach((tx) => {
             const amt = Number(tx.amount) || 0;
             if (tx.status !== "failed") {
-                const isCashIn = tx.type === "income" || tx.type === "borrow" || tx.dc === "cr";
+                const isCashIn = tx.type === "income" || tx.type === "borrow" || tx.type === "collection" || tx.dc === "cr";
                 if (isCashIn) {
-                    net += amt; // Cash In (Income / Borrow)
+                    net += amt; // Cash In (Income / Borrow / Collection)
                 } else {
-                    net -= amt; // Cash Out (Expense / Repayment / Transfer)
+                    net -= amt; // Cash Out (Expense / Repayment / Lend / Transfer)
                 }
             }
             if (tx.date) {

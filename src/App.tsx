@@ -11,7 +11,6 @@ import { Dashboard } from "./features/home/pages/Dashboard";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { NetworkProvider } from "./contexts/NetworkContext";
 import Ledger from "./features/finance/pages/LedgerPage";
-import ObligationsPage from "./features/finance/pages/ObligationsPage";
 import Budgets from "./features/finance/pages/BudgetPage";
 import Accounts from "./features/finance/pages/Accounts";
 import PartiesPage from "./features/finance/pages/PartiesPage";
@@ -54,7 +53,6 @@ function App() {
                 {/* Finance Management */}
                 <Route path="/finance/ledger" element={<Ledger />} />
                 <Route path="/finance/parties" element={<PartiesPage />} />
-                <Route path="/finance/obligations" element={<ObligationsPage />} />
                 <Route path="/finance/budgets" element={<Budgets />} />
                 <Route path="/finance/accounts" element={<Accounts />} />
                 <Route path="/finance/accounts2" element={<AccountsGridPage />} />

@@ -25,7 +25,9 @@ export type TransactionType =
     | "expense"
     | "transfer"
     | "borrow"
-    | "repayment";
+    | "repayment"
+    | "lend"
+    | "collection";
 
 export interface Database {
     public: {

@@ -49,7 +49,7 @@ export const transactionTypeConfig: Record<TransactionType, {
         icon: "bi-box-arrow-in-down-right",
         badge: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-800",
         color: "text-amber-600 dark:text-amber-400",
-        description: "Money received or borrowed from a party",
+        description: "Money received or borrowed from a party (payable/liability)",
     },
     repayment: {
         label: "Repayment",
@@ -58,6 +58,22 @@ export const transactionTypeConfig: Record<TransactionType, {
         badge: "bg-purple-100 text-purple-800 dark:bg-purple-950/50 dark:text-purple-300 border border-purple-300 dark:border-purple-800",
         color: "text-purple-600 dark:text-purple-400",
         description: "Paying back a borrowed amount or debt",
+    },
+    lend: {
+        label: "Lend",
+        dc: "dr",
+        icon: "bi-box-arrow-up-left",
+        badge: "bg-orange-100 text-orange-800 dark:bg-orange-950/50 dark:text-orange-300 border border-orange-300 dark:border-orange-800",
+        color: "text-orange-600 dark:text-orange-400",
+        description: "Money lent out to a person or entity (receivable created)",
+    },
+    collection: {
+        label: "Collection",
+        dc: "cr",
+        icon: "bi-box-arrow-in-down-left",
+        badge: "bg-teal-100 text-teal-800 dark:bg-teal-950/50 dark:text-teal-300 border border-teal-300 dark:border-teal-800",
+        color: "text-teal-600 dark:text-teal-400",
+        description: "Collecting money that was lent out (receivable recovered)",
     },
 };
 
@@ -91,7 +107,8 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
     }
 
     const type = (row.type as TransactionType) || (row.dc === "cr" ? "income" : "expense");
-    const dc = (row.dc as "dr" | "cr") || (type === "income" || type === "borrow" ? "cr" : "dr");
+    const isCashIn = type === "income" || type === "borrow" || type === "collection";
+    const dc = (row.dc as "dr" | "cr") || (isCashIn ? "cr" : "dr");
 
     return {
         id: String(row.id),
@@ -145,7 +162,8 @@ export const TransactionService = {
         const txId = crypto.randomUUID ? crypto.randomUUID() : `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
         const type = payload.type || (payload.dc === "cr" ? "income" : "expense");
-        const dc = payload.dc || (type === "income" || type === "borrow" ? "cr" : "dr");
+        const isCashIn = type === "income" || type === "borrow" || type === "collection";
+        const dc = payload.dc || (isCashIn ? "cr" : "dr");
 
         const newRow: TransactionRow = {
             id: txId,
@@ -214,7 +232,8 @@ export const TransactionService = {
         if (payload.amount !== undefined) updateData.amount = payload.amount;
         if (payload.type !== undefined) {
             updateData.type = payload.type;
-            updateData.dc = payload.dc || (payload.type === "income" || payload.type === "borrow" ? "cr" : "dr");
+            const isCashIn = payload.type === "income" || payload.type === "borrow" || payload.type === "collection";
+            updateData.dc = payload.dc || (isCashIn ? "cr" : "dr");
         } else if (payload.dc !== undefined) {
             updateData.dc = payload.dc;
         }

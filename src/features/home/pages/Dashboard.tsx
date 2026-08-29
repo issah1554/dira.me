@@ -28,7 +28,7 @@ export function Dashboard() {
         let income = 0;
         let expenses = 0;
         transactions.forEach(t => {
-            const isCashIn = t.type === "income" || t.type === "borrow" || t.dc === "cr";
+            const isCashIn = t.type === "income" || t.type === "borrow" || t.type === "collection" || t.dc === "cr";
             if (isCashIn) income += t.amount;
             else expenses += t.amount;
         });
@@ -130,7 +130,7 @@ export function Dashboard() {
                             {transactions.slice(0, 5).map(tx => {
                                 const typeKey = (tx.type as TransactionType) || (tx.dc === "cr" ? "income" : "expense");
                                 const cfg = transactionTypeConfig[typeKey] || transactionTypeConfig.expense;
-                                const isCashIn = typeKey === "income" || typeKey === "borrow" || tx.dc === "cr";
+                                const isCashIn = typeKey === "income" || typeKey === "borrow" || typeKey === "collection" || tx.dc === "cr";
                                 const isUSD = tx.currency === "USD";
                                 const formatted = isUSD ? `$ ${tx.amount.toFixed(2)}` : `${tx.amount.toLocaleString()} TZS`;
 

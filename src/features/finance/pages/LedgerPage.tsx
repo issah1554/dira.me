@@ -30,6 +30,8 @@ const transactionTypes: { value: TransactionType; label: string }[] = [
     { value: "transfer", label: "Transfer" },
     { value: "borrow", label: "Borrow" },
     { value: "repayment", label: "Repayment" },
+    { value: "lend", label: "Lend" },
+    { value: "collection", label: "Collection" },
 ];
 
 /* =======================
@@ -317,7 +319,7 @@ export default function LedgerPage() {
             priority: 10,
             render: row => {
                 const isUSD = row.currency === "USD";
-                const isCashIn = row.type === "income" || row.type === "borrow" || row.dc === "cr";
+                const isCashIn = row.type === "income" || row.type === "borrow" || row.type === "collection" || row.dc === "cr";
                 const formattedAmount = isUSD
                     ? `$ ${row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `${row.amount.toLocaleString()} TZS`;
@@ -438,9 +440,9 @@ export default function LedgerPage() {
         <div className="space-y-4 text-main-700">
             {/* Minimal Filter Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[260px]">
+                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-65">
                     {/* Live Search Input */}
-                    <div className="relative flex-1 max-w-xs min-w-[200px]">
+                    <div className="relative flex-1 max-w-xs min-w-50">
                         <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-main-400 text-xs pointer-events-none" />
                         <input
                             type="text"
@@ -690,7 +692,7 @@ export default function LedgerPage() {
                             <label className="block text-xs font-semibold text-main-700 dark:text-main-300 mb-2 uppercase tracking-wider">
                                 Transaction Type <span className="text-red-500">*</span>
                             </label>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
                                 {transactionTypes.map(t => {
                                     const cfg = transactionTypeConfig[t.value];
                                     const isSelected = formData.type === t.value;

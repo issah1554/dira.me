@@ -139,7 +139,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
-    type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('income', 'expense', 'transfer', 'borrow', 'repayment')),
+    type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('income', 'expense', 'transfer', 'borrow', 'repayment', 'lend', 'collection')),
     dc TEXT NOT NULL CHECK (dc IN ('dr', 'cr')),
     account TEXT NOT NULL,
     party_id UUID REFERENCES public.parties(id) ON DELETE SET NULL,
