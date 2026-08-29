@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "../../components/ui/Buttons";
 import { TextInput } from "../../components/ui/TextInput";
 import ProfilePictureEditor from "../../components/ui/PictureCroper";
-import { Modal } from "../../components/ui/Modal";
+import { Modal, ModalHeader, ModalBody } from "../../components/ui/Modal";
 
 const settingsSections = [
     { id: "general", label: "General", icon: "bi-gear" },
@@ -80,10 +80,14 @@ export function Settings() {
                                 </div>
                             </div>
                             <Modal open={openPictureEditor} onClose={() => setOpenPictureEditor(false)} size="xl" blur={false}>
-                                <div className="p-6 bg-main-100/70 rounded-lg ">
+                                <ModalHeader
+                                    title="Edit Profile Picture"
+                                    icon="bi-person-bounding-box"
+                                    onClose={() => setOpenPictureEditor(false)}
+                                />
+                                <ModalBody>
                                     <ProfilePictureEditor />
-                                </div>
-
+                                </ModalBody>
                             </Modal>
                         </>
                     )}

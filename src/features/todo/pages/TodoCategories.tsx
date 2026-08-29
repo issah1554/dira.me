@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/Buttons";
-import { Modal } from "../../../components/ui/Modal";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
 
 type Category = {
@@ -84,24 +84,41 @@ export function TodoCategories() {
 
             {/* Add Category Modal */}
             <Modal open={open} onClose={handleClose} size="md" position="center" blur closeOnBackdrop closeOnEsc>
-                <div className={`bg-main-100 rounded-lg shadow-xl overflow-hidden ${open ? "animation-zoom-in" : ""}`}>
-                    <div className="flex items-center justify-between px-6 py-4 text-main-700 border-b border-main-300">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                            <i className="bi bi-tag" />
-                            Add New Category
-                        </h3>
-                        <button onClick={handleClose}><i className="bi bi-x-lg" /></button>
-                    </div>
-                    <form className="p-6 space-y-4" onSubmit={handleSubmit}>
-                        <TextInput label="Category Name" labelBgColor="bg-main-100" color="primary" size="md" rounded="md"
-                            value={formData.name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, name: e.target.value }))} required />
-                        <TextInput label="Description" labelBgColor="bg-main-100" color="primary" size="md" rounded="md"
-                            value={formData.description} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, description: e.target.value }))} />
+                <ModalHeader
+                    title="Add New Category"
+                    icon="bi-tag"
+                    onClose={handleClose}
+                />
+
+                <form className="flex flex-col flex-1 min-h-0" onSubmit={handleSubmit}>
+                    <ModalBody>
+                        <TextInput
+                            label="Category Name"
+                            labelBgColor="bg-main-100"
+                            color="primary"
+                            size="md"
+                            rounded="md"
+                            value={formData.name}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, name: e.target.value }))}
+                            required
+                        />
+                        <TextInput
+                            label="Description"
+                            labelBgColor="bg-main-100"
+                            color="primary"
+                            size="md"
+                            rounded="md"
+                            value={formData.description}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, description: e.target.value }))}
+                        />
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium mb-1">Color</label>
-                                <select className="w-full border border-main-300 rounded-md px-3 py-2"
-                                    value={formData.color} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, color: e.target.value }))}>
+                                <select
+                                    className="w-full border border-main-300 rounded-md px-3 py-2 bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    value={formData.color}
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, color: e.target.value }))}
+                                >
                                     <option value="bg-blue-500">Blue</option>
                                     <option value="bg-green-500">Green</option>
                                     <option value="bg-red-500">Red</option>
@@ -112,8 +129,11 @@ export function TodoCategories() {
                             </div>
                             <div>
                                 <label className="block text-sm font-medium mb-1">Icon</label>
-                                <select className="w-full border border-main-300 rounded-md px-3 py-2"
-                                    value={formData.icon} onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, icon: e.target.value }))}>
+                                <select
+                                    className="w-full border border-main-300 rounded-md px-3 py-2 bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    value={formData.icon}
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, icon: e.target.value }))}
+                                >
                                     <option value="bi-tag">Tag</option>
                                     <option value="bi-wallet2">Wallet</option>
                                     <option value="bi-receipt">Receipt</option>
@@ -124,14 +144,18 @@ export function TodoCategories() {
                                 </select>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2 pt-4">
-                            <Button type="button" color="secondary" size="sm" rounded="md" onClick={handleClose}>Cancel</Button>
-                            <Button type="submit" color="primary" size="sm" rounded="md">Add Category</Button>
-                        </div>
-                    </form>
-                </div>
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Button type="button" color="secondary" size="sm" rounded="md" onClick={handleClose}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" color="primary" size="sm" rounded="md">
+                            Add Category
+                        </Button>
+                    </ModalFooter>
+                </form>
             </Modal>
         </div>
     );
 }
-

@@ -16,6 +16,7 @@ export type TransactionDTO = {
     amount: number;
     dc: "dr" | "cr";
     account: string;
+    party_id?: string | null;
     currency?: CurrencyCode;
     notes: string;
     category: string;
@@ -43,6 +44,7 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         amount: typeof row.amount === "number" ? row.amount : parseFloat(String(row.amount)) || 0,
         dc: (row.dc as "dr" | "cr") || "dr",
         account: row.account || "",
+        party_id: row.party_id || null,
         currency: (row.currency as CurrencyCode) || "TZS",
         notes: row.notes || "",
         category: row.category || "",
@@ -75,6 +77,7 @@ export const TransactionService = {
             amount: payload.amount,
             dc: payload.dc,
             account: payload.account,
+            party_id: payload.party_id || null,
             currency: payload.currency || "TZS",
             notes: payload.notes || "",
             category: payload.category || "",
@@ -106,6 +109,7 @@ export const TransactionService = {
         if (payload.amount !== undefined) updateData.amount = payload.amount;
         if (payload.dc !== undefined) updateData.dc = payload.dc;
         if (payload.account !== undefined) updateData.account = payload.account;
+        if (payload.party_id !== undefined) updateData.party_id = payload.party_id;
         if (payload.currency !== undefined) updateData.currency = payload.currency;
         if (payload.notes !== undefined) updateData.notes = payload.notes;
         if (payload.category !== undefined) updateData.category = payload.category;

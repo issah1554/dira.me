@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../../components/ui/Buttons";
-import { Modal } from "../../../components/ui/Modal";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
 import { useAccounts } from "../hooks/useAccounts";
 import Loader from "../../../components/ui/Loaders";
@@ -262,15 +262,14 @@ export default function Accounts() {
 
             {/* Add Account Modal */}
             <Modal open={open} onClose={handleClose} size="md" position="center" blur closeOnBackdrop closeOnEsc>
-                <div className={`bg-main-100 rounded-lg shadow-xl overflow-hidden ${open ? "animation-zoom-in" : ""}`}>
-                    <div className="flex items-center justify-between px-6 py-4 text-main-700">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                            <i className="bi bi-wallet2" />
-                            Add New Account
-                        </h3>
-                        <button onClick={handleClose}><i className="bi bi-x-lg" /></button>
-                    </div>
-                    <form className="p-6 space-y-4" onSubmit={handleSubmit}>
+                <ModalHeader
+                    title="Add New Account"
+                    icon="bi-wallet2"
+                    onClose={handleClose}
+                />
+
+                <form className="flex flex-col flex-1 min-h-0" onSubmit={handleSubmit}>
+                    <ModalBody>
                         <TextInput
                             label="Account Name"
                             labelBgColor="bg-main-100"
@@ -355,39 +354,39 @@ export default function Accounts() {
                             onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Any additional details about this account"
                         />
+                    </ModalBody>
 
-                        <div className="flex justify-end gap-3 pt-4 border-t border-main-200">
-                            <Button
-                                type="button"
-                                color="neutral"
-                                size="sm"
-                                variant="outline"
-                                onClick={handleClose}
-                                disabled={loading}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                type="submit"
-                                color="primary"
-                                size="sm"
-                                disabled={loading}
-                            >
-                                {loading ? (
-                                    <>
-                                        <i className="bi bi-arrow-clockwise animate-spin mr-2" />
-                                        Creating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <i className="bi bi-check-lg mr-2" />
-                                        Create Account
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
+                    <ModalFooter>
+                        <Button
+                            type="button"
+                            color="neutral"
+                            size="sm"
+                            variant="outline"
+                            onClick={handleClose}
+                            disabled={loading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            color="primary"
+                            size="sm"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <i className="bi bi-arrow-clockwise animate-spin mr-2" />
+                                    Creating...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="bi bi-check-lg mr-2" />
+                                    Create Account
+                                </>
+                            )}
+                        </Button>
+                    </ModalFooter>
+                </form>
             </Modal>
         </div>
     );

@@ -13,6 +13,7 @@ import Ledger from "./features/finance/pages/LedgerPage";
 import ObligationsPage from "./features/finance/pages/ObligationsPage";
 import Budgets from "./features/finance/pages/BudgetPage";
 import Accounts from "./features/finance/pages/Accounts";
+import PartiesPage from "./features/finance/pages/PartiesPage";
 import { Reports } from "./features/reports/pages/Reports";
 import { Settings } from "./features/me/Settings";
 import { Help } from "./features/help/pages/Help";
@@ -51,6 +52,7 @@ function App() {
 
               {/* Finance Management */}
               <Route path="/finance/ledger" element={<Ledger />} />
+              <Route path="/finance/parties" element={<PartiesPage />} />
               <Route path="/finance/obligations" element={<ObligationsPage />} />
               <Route path="/finance/budgets" element={<Budgets />} />
               <Route path="/finance/accounts" element={<Accounts />} />

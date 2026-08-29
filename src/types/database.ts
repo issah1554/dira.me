@@ -10,6 +10,16 @@ export type Json =
 
 export type CurrencyCode = "TZS" | "USD";
 
+export type PartyType =
+    | "person"
+    | "company"
+    | "employer"
+    | "customer"
+    | "merchant"
+    | "bank"
+    | "government"
+    | "other";
+
 export interface Database {
     public: {
         Tables: {
@@ -63,6 +73,41 @@ export interface Database {
                     updated_at?: string;
                 };
             };
+            parties: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    name: string;
+                    type: PartyType;
+                    phone: string;
+                    email: string;
+                    notes: string;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    user_id: string;
+                    name: string;
+                    type?: PartyType;
+                    phone?: string;
+                    email?: string;
+                    notes?: string;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    user_id?: string;
+                    name?: string;
+                    type?: PartyType;
+                    phone?: string;
+                    email?: string;
+                    notes?: string;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
             transactions: {
                 Row: {
                     id: string;
@@ -71,6 +116,7 @@ export interface Database {
                     amount: number;
                     dc: "dr" | "cr";
                     account: string;
+                    party_id?: string | null;
                     currency: CurrencyCode;
                     notes: string;
                     category: string;
@@ -85,6 +131,7 @@ export interface Database {
                     amount: number;
                     dc: "dr" | "cr";
                     account: string;
+                    party_id?: string | null;
                     currency?: CurrencyCode;
                     notes?: string;
                     category?: string;
@@ -99,6 +146,7 @@ export interface Database {
                     amount?: number;
                     dc?: "dr" | "cr";
                     account?: string;
+                    party_id?: string | null;
                     currency?: CurrencyCode;
                     notes?: string;
                     category?: string;
@@ -118,6 +166,7 @@ export interface DbTransaction {
     dc: "dr" | "cr";
     notes: string;
     account: string;
+    party_id?: string | null;
     currency?: CurrencyCode;
     category: string;
     status: "completed" | "pending" | "failed";
@@ -132,6 +181,7 @@ export interface TransactionFormData {
     dc: "dr" | "cr";
     notes: string;
     account: string;
+    party_id?: string | null;
     currency?: CurrencyCode;
     category: string;
     status?: "completed" | "pending" | "failed";
@@ -140,6 +190,7 @@ export interface TransactionFormData {
 export type TransactionFilter = {
     status?: "completed" | "pending" | "failed";
     account?: string;
+    party_id?: string;
     currency?: CurrencyCode;
     dateFrom?: string;
     dateTo?: string;

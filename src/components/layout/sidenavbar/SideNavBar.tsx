@@ -83,8 +83,9 @@ export function Sidebar() {
                                 icon: <i className="bi bi-wallet2" />,
                                 subItems: [
                                     { label: "Transactions", to: "/finance/ledger", icon: <i className="bi bi-journal-text" /> },
-                                    { label: "Obligations", to: "/finance/obligations", icon: <i className="bi bi-receipt" /> },
+                                    { label: "Parties", to: "/finance/parties", icon: <i className="bi bi-people" /> },
                                     { label: "Accounts", to: "/finance/accounts", icon: <i className="bi bi-bank" /> },
+                                    { label: "Obligations", to: "/finance/obligations", icon: <i className="bi bi-receipt" /> },
                                     { label: "Budgets", to: "/finance/budgets", icon: <i className="bi bi-piggy-bank" /> },
                                 ],
                             },

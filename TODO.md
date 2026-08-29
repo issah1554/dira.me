@@ -5,3 +5,4 @@
 
 - [ ] Support offline usage and sync automatically when connected back
 - [ ] Implement dirty form to prevent data loss
+- [ ] After clicking a navitem menu in mobile layout close the side bar

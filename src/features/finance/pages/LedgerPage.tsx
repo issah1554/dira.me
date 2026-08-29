@@ -3,11 +3,13 @@ import { Link } from "react-router-dom";
 import CollapsibleTable, { type Column } from "../../../components/ui/Table";
 import { Button } from "../../../components/ui/Buttons";
 import { Toast } from "../../../components/ui/Toast";
-import { Modal } from "../../../components/ui/Modal";
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
 import { DatePicker } from "../../../components/ui/DatePicker";
 import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
+import { useParties } from "../hooks/useParties";
+import { partyTypeIcons, partyTypeColors } from "../services/partyService";
 import type { Transaction } from "../services/TransactionService";
 import Loader from "../../../components/ui/Loaders";
 
@@ -24,6 +26,7 @@ export default function LedgerPage() {
         remove: removeTransaction,
     } = useTransactions();
     const { accounts, loadAccounts } = useAccounts();
+    const { parties } = useParties();
 
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -31,6 +34,7 @@ export default function LedgerPage() {
     const [filterStatus, setFilterStatus] = useState("");
     const [filterType, setFilterType] = useState("");
     const [filterAccount, setFilterAccount] = useState("");
+    const [filterParty, setFilterParty] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
 
@@ -39,6 +43,7 @@ export default function LedgerPage() {
         amount: "",
         dc: "cr" as "dr" | "cr", // Default to Cash In
         account: "",
+        party_id: "" as string | null,
         category: "General",
         notes: "",
     });
@@ -51,6 +56,7 @@ export default function LedgerPage() {
             amount: "",
             dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
+            party_id: null,
             category: "General",
             notes: "",
         });
@@ -63,6 +69,7 @@ export default function LedgerPage() {
             amount: "",
             dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
+            party_id: null,
             category: "General",
             notes: "",
         });
@@ -76,6 +83,7 @@ export default function LedgerPage() {
             amount: String(tx.amount),
             dc: tx.dc,
             account: tx.account,
+            party_id: tx.party_id || null,
             category: tx.category || "General",
             notes: tx.notes || "",
         });
@@ -102,6 +110,7 @@ export default function LedgerPage() {
             amount: amt,
             dc: formData.dc,
             account: formData.account,
+            party_id: formData.party_id || null,
             currency,
             category: formData.category || "General",
             notes: formData.notes,
@@ -132,6 +141,7 @@ export default function LedgerPage() {
             if (filterStatus && tx.status !== filterStatus) return false;
             if (filterType && tx.dc !== filterType) return false;
             if (filterAccount && tx.account !== filterAccount) return false;
+            if (filterParty && tx.party_id !== filterParty) return false;
             if (filterDateFrom) {
                 const txDate = tx.date.split("T")[0];
                 if (txDate < filterDateFrom) return false;
@@ -142,7 +152,7 @@ export default function LedgerPage() {
             }
             return true;
         });
-    }, [transactions, filterStatus, filterType, filterAccount, filterDateFrom, filterDateTo]);
+    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo]);
 
     /* =======================
        Columns
@@ -225,6 +235,25 @@ export default function LedgerPage() {
         },
 
         {
+            key: "party_id",
+            header: "Party / Counterparty",
+            sortable: true,
+            priority: 8,
+            render: row => {
+                const party = parties.find(p => p.id === row.party_id);
+                if (!party) return <span className="text-main-400 text-xs">—</span>;
+                const colors = partyTypeColors[party.type] || partyTypeColors.other;
+                const icon = partyTypeIcons[party.type] || "bi-person";
+                return (
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${colors.badge}`}>
+                        <i className={`bi ${icon}`} />
+                        {party.name}
+                    </span>
+                );
+            },
+        },
+
+        {
             key: "account",
             header: "Account",
             sortable: true,
@@ -241,7 +270,7 @@ export default function LedgerPage() {
             key: "category",
             header: "Category",
             sortable: true,
-            priority: 8,
+            priority: 7,
             render: row => (
                 <span className="text-sm font-medium text-main-700">
                     {row.category || "—"}
@@ -255,7 +284,7 @@ export default function LedgerPage() {
             key: "status",
             header: "Status",
             sortable: true,
-            priority: 7,
+            priority: 6,
             render: row => (
                 <span
                     className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${row.status === "completed"
@@ -345,6 +374,17 @@ export default function LedgerPage() {
                         ))}
                     </select>
 
+                    <select
+                        value={filterParty}
+                        onChange={e => setFilterParty(e.target.value)}
+                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
+                    >
+                        <option value="">All Parties</option>
+                        {parties.map(p => (
+                            <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                        ))}
+                    </select>
+
                     <div className="flex items-center gap-1.5 border border-main-300 rounded px-2 py-1 bg-main-100">
                         <i className="bi bi-calendar-range text-main-500 text-xs" />
                         <input
@@ -388,21 +428,17 @@ export default function LedgerPage() {
 
             {/* Add / Edit Ledger Entry Modal */}
             <Modal open={open} onClose={closeModal} size="md" position="center" blur>
-                <div className="bg-main-200 rounded-lg shadow-xl">
-                    <div className="flex items-center justify-between px-6 py-4">
-                        <h3 className="text-lg text-main font-semibold flex items-center gap-2">
-                            <i className={editingId ? "bi bi-pencil-square" : "bi bi-journal-plus"} />
-                            {editingId ? "Edit Transaction" : "Add Ledger Entry"}
-                        </h3>
-                        <button onClick={closeModal}>
-                            <i className="bi bi-x-lg" />
-                        </button>
-                    </div>
+                <ModalHeader
+                    title={editingId ? "Edit Transaction" : "Add Ledger Entry"}
+                    icon={editingId ? "bi-pencil-square" : "bi-journal-plus"}
+                    onClose={closeModal}
+                />
 
-                    <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                    <ModalBody>
                         <DatePicker
                             label="Date"
-                            labelBgColor="bg-main-200"
+                            labelBgColor="bg-main-100"
                             value={formData.date}
                             onChange={date => setFormData(p => ({ ...p, date }))}
                             required
@@ -417,7 +453,7 @@ export default function LedgerPage() {
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
                                 ${formData.dc === "cr"
                                     ? "bg-green-100 dark:bg-green-950/40 border-green-500 text-green-700 dark:text-green-300 ring-2 ring-green-500/20"
-                                    : "border-main-300 text-main-600 hover:bg-main-100"}
+                                    : "border-main-300 text-main-600 hover:bg-main-200"}
                                 `}
                             >
                                 <input
@@ -436,7 +472,7 @@ export default function LedgerPage() {
                                 className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
                                 ${formData.dc === "dr"
                                     ? "bg-red-100 dark:bg-red-950/40 border-red-500 text-red-700 dark:text-red-300 ring-2 ring-red-500/20"
-                                    : "border-main-300 text-main-600 hover:bg-main-100"}
+                                    : "border-main-300 text-main-600 hover:bg-main-200"}
                                 `}
                             >
                                 <input
@@ -454,7 +490,7 @@ export default function LedgerPage() {
 
                         <TextInput
                             label="Amount"
-                            labelBgColor="bg-main-200"
+                            labelBgColor="bg-main-100"
                             type="number"
                             value={formData.amount}
                             onChange={e => setFormData(p => ({ ...p, amount: e.target.value }))}
@@ -463,19 +499,46 @@ export default function LedgerPage() {
                             size="md"
                         />
 
+                        {/* Party / Counterparty Selection */}
+                        <div>
+                            <div className="flex items-center justify-between mb-1">
+                                <label className="block text-sm font-medium text-main">
+                                    Party / Counterparty <span className="text-xs text-main-500 font-normal">(Optional)</span>
+                                </label>
+                                <Link
+                                    to="/finance/parties"
+                                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                                >
+                                    <i className="bi bi-plus-circle" /> Manage Parties
+                                </Link>
+                            </div>
+                            <select
+                                className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                                value={formData.party_id || ""}
+                                onChange={e => setFormData(p => ({ ...p, party_id: e.target.value || null }))}
+                            >
+                                <option value="">-- None / Direct --</option>
+                                {parties.map(p => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.name} ({p.type})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
                         <TextInput
                             label="Category"
-                            labelBgColor="bg-main-200"
+                            labelBgColor="bg-main-100"
                             value={formData.category}
                             onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                            placeholder="e.g. Sales, Food, Transport, Supplies"
+                            placeholder="e.g. Salary, Rent, Food, Utilities, Sales"
                             color="primary"
                             size="md"
                         />
 
                         <TextInput
                             label="Notes / Description"
-                            labelBgColor="bg-main-200"
+                            labelBgColor="bg-main-100"
                             value={formData.notes}
                             onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
                             placeholder="Add transaction details or memo"
@@ -483,7 +546,7 @@ export default function LedgerPage() {
                             size="md"
                         />
 
-                        {/* Account Selection - placed at the bottom so notes/category relate to the transaction */}
+                        {/* Account Selection */}
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
                                 Associated Account <span className="text-red-500">*</span>
@@ -520,22 +583,22 @@ export default function LedgerPage() {
                                 </div>
                             )}
                         </div>
+                    </ModalBody>
 
-                        <div className="flex justify-end gap-3 pt-4 border-t border-main-300">
-                            <Button variant="outline" size="sm" onClick={closeModal} color="primary" type="button">
-                                Cancel
-                            </Button>
-                            <Button
-                                size="sm"
-                                color="primary"
-                                type="submit"
-                                disabled={accounts.length === 0}
-                            >
-                                {editingId ? "Save Changes" : "Save Entry"}
-                            </Button>
-                        </div>
-                    </form>
-                </div>
+                    <ModalFooter>
+                        <Button variant="outline" size="sm" onClick={closeModal} color="primary" type="button">
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            color="primary"
+                            type="submit"
+                            disabled={accounts.length === 0}
+                        >
+                            {editingId ? "Save Changes" : "Save Entry"}
+                        </Button>
+                    </ModalFooter>
+                </form>
             </Modal>
 
             {/* Table or Empty State */}
