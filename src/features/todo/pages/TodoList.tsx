@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../../../components/ui/Buttons";
 import { Modal } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
+import { DatePicker } from "../../../components/ui/DatePicker";
 
 type Todo = {
     id: number;
@@ -162,8 +163,16 @@ export function TodoList() {
                                     <option value="high">High</option>
                                 </select>
                             </div>
-                            <TextInput label="Due Date" type="date" labelBgColor="bg-main-100" color="primary" size="md" rounded="md"
-                                value={formData.dueDate} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(p => ({ ...p, dueDate: e.target.value }))} />
+                            <DatePicker
+                                label="Due Date"
+                                labelBgColor="bg-main-100"
+                                color="primary"
+                                size="md"
+                                rounded="md"
+                                value={formData.dueDate}
+                                onChange={dueDate => setFormData(p => ({ ...p, dueDate }))}
+                                showTodayButton
+                            />
                         </div>
                         <div className="flex justify-end gap-2 pt-4">
                             <Button type="button" color="secondary" size="sm" rounded="md" onClick={handleClose}>Cancel</Button>

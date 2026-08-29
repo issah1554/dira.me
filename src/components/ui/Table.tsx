@@ -15,7 +15,7 @@ type Primitive = string | number | boolean | null | undefined;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type BaseRow = {
-  id: number;
+  id: string | number;
   [key: string]: Primitive | ReactNode | unknown[] | Record<string, unknown>;
 };
 
@@ -65,7 +65,7 @@ export default function CollapsibleTable<T extends BaseRow>({
 
   const [page, setPage] = useState(1);
   const [rowsPerPageOption, setRowsPerPageOption] = useState(rowsPerPage);
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [expandedRows, setExpandedRows] = useState<Set<string | number>>(new Set());
   const [allExpanded, setAllExpanded] = useState(false);
 
   // ✅ CRITICAL FIX: start with all columns visible
@@ -179,7 +179,7 @@ export default function CollapsibleTable<T extends BaseRow>({
      Expand logic
   ======================= */
 
-  const toggleRow = (id: number) => {
+  const toggleRow = (id: string | number) => {
     setExpandedRows(prev => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);

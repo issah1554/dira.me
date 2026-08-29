@@ -1,46 +1,18 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { AccountCard } from "../../../components/ui/AccountCard";
-
-const sampleAccounts = [
-    {
-        id: "1",
-        name: "Main Salary Account",
-        number: "1234 5678 9012",
-        type: "Savings",
-        status: "active",
-        balance: 1250000,
-        currency: "TZS",
-    },
-    {
-        id: "2",
-        name: "Emergency Fund",
-        number: "2234 5678 9012",
-        type: "Savings",
-        status: "inactive",
-        balance: 450000,
-        currency: "TZS",
-    },
-    {
-        id: "3",
-        name: "USD Investment",
-        number: "US-7788-9900",
-        type: "Current",
-        status: "frozen",
-        balance: 2300,
-        currency: "USD",
-    },
-    {
-        id: "4",
-        name: "Old Account",
-        number: "9988 7766 5544",
-        type: "Current",
-        status: "closed",
-        balance: 0,
-        currency: "TZS",
-    },
-];
+import { useAccounts } from "../hooks/useAccounts";
+import Loader from "../../../components/ui/Loaders";
 
 export const AccountsGridPage: React.FC = () => {
+    const { accounts, loading, deleteAccount } = useAccounts();
+
+    const handleDelete = async (id: string, name: string) => {
+        if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
+            await deleteAccount(id);
+        }
+    };
+
     return (
         <main className="min-h-screen bg-main-50 px-4 py-6">
             <div className="mx-auto w-full max-w-6xl">
@@ -55,47 +27,67 @@ export const AccountsGridPage: React.FC = () => {
                         </p>
                     </div>
 
-                    <button className="mt-2 inline-flex items-center justify-center rounded-md border border-main-300 bg-main-100 px-3 py-1.5 text-sm font-medium text-main-800 hover:bg-main-200 sm:mt-0">
+                    <Link
+                        to="/finance/accounts"
+                        className="mt-2 inline-flex items-center justify-center rounded-md border border-main-300 bg-main-100 px-3 py-1.5 text-sm font-medium text-main-800 hover:bg-main-200 sm:mt-0"
+                    >
                         + Add Account
-                    </button>
+                    </Link>
                 </header>
 
-                {/* Responsive grid of credit-card–ratio cards */}
-                <section
-                    className={`
-                        grid gap-4
-                        grid-cols-1      
-                        sm:grid-cols-1  
-                        md:grid-cols-1 
-                        lg:grid-cols-2 
-                        xl:grid-cols-3
-                    `}
-                >
-                    {sampleAccounts.map((acc) => (
-                        <div
-                            key={acc.id}
-                            className="
-                                relative w-full
-                                max-w-sm
-                                aspect-85/54   /* ≈ real credit card ratio */
-                            "
+                {loading && accounts.length === 0 ? (
+                    <div className="flex items-center justify-center py-16">
+                        <Loader size={40} />
+                    </div>
+                ) : accounts.length === 0 ? (
+                    <div className="text-center py-16 border-2 border-dashed border-main-300 rounded-lg">
+                        <i className="bi bi-wallet2 text-4xl text-main-400 mb-3" />
+                        <h4 className="text-lg font-medium text-main-700 mb-1">No accounts found</h4>
+                        <p className="text-sm text-main-500 mb-4">You haven't created any financial accounts yet.</p>
+                        <Link
+                            to="/finance/accounts"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white text-sm font-medium rounded-md hover:bg-primary/90 transition-colors"
                         >
-                            <div className="absolute inset-0">
-                                <AccountCard
-                                    accountName={acc.name}
-                                    accountNumber={acc.number}
-                                    accountType={acc.type}
-                                    status={acc.status as any}
-                                    balance={acc.balance}
-                                    currency={acc.currency}
-                                    className="h-full"
-                                    onEdit={() => console.log("Edit", acc.id)}
-                                    onDelete={() => console.log("Delete", acc.id)}
-                                />
+                            <i className="bi bi-plus-lg" /> Add Your First Account
+                        </Link>
+                    </div>
+                ) : (
+                    /* Responsive grid of credit-card–ratio cards */
+                    <section
+                        className={`
+                            grid gap-4
+                            grid-cols-1      
+                            sm:grid-cols-1  
+                            md:grid-cols-1 
+                            lg:grid-cols-2 
+                            xl:grid-cols-3
+                        `}
+                    >
+                        {accounts.map((acc) => (
+                            <div
+                                key={acc.id}
+                                className="
+                                    relative w-full
+                                    max-w-sm
+                                    aspect-85/54   /* ≈ real credit card ratio */
+                                "
+                            >
+                                <div className="absolute inset-0">
+                                    <AccountCard
+                                        accountName={acc.name}
+                                        accountNumber={acc.accountNumber || "—"}
+                                        accountType={acc.type}
+                                        status={acc.status}
+                                        balance={acc.currentBalance}
+                                        currency="TZS"
+                                        className="h-full"
+                                        onDelete={() => handleDelete(acc.id, acc.name)}
+                                    />
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </section>
+                        ))}
+                    </section>
+                )}
             </div>
         </main>
     );

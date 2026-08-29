@@ -149,14 +149,18 @@ export default function BudgetPage() {
         <div className="space-y-4">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex gap-2">
-                    <select className="border rounded px-2 py-1 text-sm">
-                        <option value="">All Periods</option>
-                        <option>Jan 2026</option>
-                        <option>Feb 2026</option>
-                    </select>
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 border border-main-300 rounded px-2 py-1 bg-main-100">
+                        <i className="bi bi-calendar-month text-main-500 text-xs" />
+                        <input
+                            type="month"
+                            defaultValue="2026-01"
+                            aria-label="Filter period"
+                            className="bg-transparent text-xs text-main focus:outline-none cursor-pointer"
+                        />
+                    </div>
 
-                    <select className="border rounded px-2 py-1 text-sm">
+                    <select className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100">
                         <option value="">All Accounts</option>
                         <option>Cash</option>
                         <option>Bank</option>

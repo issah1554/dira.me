@@ -177,19 +177,34 @@ export default function ObligationsPage() {
         <div className="space-y-4">
             {/* Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex gap-2">
-                    <select className="border rounded px-2 py-1 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                    <select className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100">
                         <option value="">All Status</option>
                         <option value="open">Open</option>
                         <option value="overdue">Overdue</option>
                         <option value="settled">Settled</option>
                     </select>
 
-                    <select className="border rounded px-2 py-1 text-sm">
+                    <select className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100">
                         <option value="">All Type</option>
                         <option value="dr">Payables (DR)</option>
                         <option value="cr">Receivables (CR)</option>
                     </select>
+
+                    <div className="flex items-center gap-1.5 border border-main-300 rounded px-2 py-1 bg-main-100">
+                        <i className="bi bi-calendar-range text-main-500 text-xs" />
+                        <input
+                            type="date"
+                            aria-label="From date"
+                            className="bg-transparent text-xs text-main focus:outline-none cursor-pointer"
+                        />
+                        <span className="text-xs text-main-400">—</span>
+                        <input
+                            type="date"
+                            aria-label="To date"
+                            className="bg-transparent text-xs text-main focus:outline-none cursor-pointer"
+                        />
+                    </div>
                 </div>
 
                 <div className="flex gap-2">

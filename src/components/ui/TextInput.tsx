@@ -37,7 +37,8 @@ export function TextInput({
     required,
     ...rest
 }: TextInputProps) {
-    const inputId = id ?? React.useId();
+    const generatedId = React.useId();
+    const inputId = id ?? generatedId;
 
     const [touched, setTouched] = React.useState(false);
     const [invalid, setInvalid] = React.useState(false);
@@ -156,8 +157,9 @@ export function TextInput({
     const labelBgClass = colorClasses[effectiveColor].label;
     const textClasses = colorClasses[effectiveColor].text;
 
+    const isDateType = type === "date" || type === "datetime-local" || type === "time" || type === "month";
     // Always show background when floating
-    const shouldShowLabelBg = isFocused || !!value;
+    const shouldShowLabelBg = isFocused || !!value || isDateType;
     const labelClasses = shouldShowLabelBg ? `${labelBgClass} ${roundedClasses[rounded].label}` : "bg-transparent";
 
 
