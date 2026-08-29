@@ -1,15 +1,10 @@
-import {
-    collection,
-    addDoc,
-    getDocs,
-    query,
-    orderBy,
-    Timestamp,
-    doc,
-    updateDoc,
-    deleteDoc,
-} from "firebase/firestore";
-import { db } from "../../../firebase";
+// src/features/finance/services/TransactionService.ts
+import { supabase } from "../../../supabase";
+import type { Database } from "../../../types/database";
+
+type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
+type TransactionInsert = Database["public"]["Tables"]["transactions"]["Insert"];
+type TransactionUpdate = Database["public"]["Tables"]["transactions"]["Update"];
 
 /* =======================
    Types
@@ -27,13 +22,31 @@ export type TransactionDTO = {
 
 export type Transaction = TransactionDTO & {
     id: string;
+    userId?: string;
 };
 
-/* =======================
-   Collection ref
-======================= */
+const rowToTransaction = (row: TransactionRow): Transaction => {
+    let dateStr = row.date;
+    if (row.date) {
+        try {
+            dateStr = new Date(row.date).toISOString();
+        } catch {
+            dateStr = String(row.date);
+        }
+    }
 
-const ref = collection(db, "transactions");
+    return {
+        id: String(row.id),
+        date: dateStr,
+        amount: typeof row.amount === "number" ? row.amount : parseFloat(String(row.amount)) || 0,
+        dc: (row.dc as "dr" | "cr") || "dr",
+        account: row.account || "",
+        notes: row.notes || "",
+        category: row.category || "",
+        status: (row.status as "completed" | "pending" | "failed") || "completed",
+        userId: row.user_id,
+    };
+};
 
 /* =======================
    Service
@@ -41,32 +54,72 @@ const ref = collection(db, "transactions");
 
 export const TransactionService = {
     async list(): Promise<Transaction[]> {
-        const q = query(ref, orderBy("date", "desc"));
-        const snap = await getDocs(q);
+        const { data, error } = await supabase
+            .from("transactions")
+            .select("*")
+            .order("date", { ascending: false });
 
-        return snap.docs.map(d => {
-            const data = d.data();
-            return {
-                id: d.id,
-                ...data,
-                date: data.date.toDate().toISOString(),
-            } as Transaction;
-        });
+        if (error) throw error;
+        return (data || []).map((row) => rowToTransaction(row as TransactionRow));
     },
 
     async create(payload: TransactionDTO) {
-        return addDoc(ref, {
-            ...payload,
-            date: Timestamp.fromDate(new Date(payload.date)),
-            createdAt: Timestamp.now(),
-        });
+        const user = (await supabase.auth.getUser()).data.user;
+        const now = new Date().toISOString();
+
+        const insertData: TransactionInsert = {
+            date: payload.date ? new Date(payload.date).toISOString() : now,
+            amount: payload.amount,
+            dc: payload.dc,
+            account: payload.account,
+            notes: payload.notes || "",
+            category: payload.category || "",
+            status: payload.status || "completed",
+            created_at: now,
+            updated_at: now,
+        };
+
+        if (user?.id) {
+            insertData.user_id = user.id;
+        }
+
+        const { data, error } = await supabase
+            .from("transactions")
+            .insert([insertData])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return rowToTransaction(data as TransactionRow);
     },
 
     async update(id: string, payload: Partial<TransactionDTO>) {
-        return updateDoc(doc(ref, id), payload);
+        const updateData: TransactionUpdate = {
+            updated_at: new Date().toISOString(),
+        };
+
+        if (payload.date !== undefined) updateData.date = new Date(payload.date).toISOString();
+        if (payload.amount !== undefined) updateData.amount = payload.amount;
+        if (payload.dc !== undefined) updateData.dc = payload.dc;
+        if (payload.account !== undefined) updateData.account = payload.account;
+        if (payload.notes !== undefined) updateData.notes = payload.notes;
+        if (payload.category !== undefined) updateData.category = payload.category;
+        if (payload.status !== undefined) updateData.status = payload.status;
+
+        const { error } = await supabase
+            .from("transactions")
+            .update(updateData)
+            .eq("id", id);
+
+        if (error) throw error;
     },
 
     async remove(id: string) {
-        return deleteDoc(doc(ref, id));
+        const { error } = await supabase
+            .from("transactions")
+            .delete()
+            .eq("id", id);
+
+        if (error) throw error;
     },
 };

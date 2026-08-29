@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { accountService } from '../services/accountService';
 import type { Account, AccountCreateDTO, AccountUpdateDTO, AccountSummary } from '../../../types/account';
-import { useAuth } from '../../auth/hooks/useAuth'; // Assuming you have an auth hook
+import { useAuth } from '../../../contexts/AuthContext';
 
 export const useAccounts = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);

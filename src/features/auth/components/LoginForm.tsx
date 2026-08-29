@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/Buttons";
 import { TextInput } from "../../../components/ui/TextInput";
 
 interface LoginFormProps {
-    onLogin: (email: string, password: string) => Promise<void>;
+    onLogin: (email: string, password: string) => Promise<unknown> | void;
     loading?: boolean;
     error?: string;
 }

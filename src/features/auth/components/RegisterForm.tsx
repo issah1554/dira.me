@@ -5,7 +5,7 @@ import { Button } from "../../../components/ui/Buttons";
 import { TextInput } from "../../../components/ui/TextInput";
 import { Toast } from "../../../components/ui/Toast";
 interface RegisterFormProps {
-    onRegister: (email: string, password: string) => Promise<void>;
+    onRegister: (email: string, password: string) => Promise<unknown> | void;
     loading?: boolean;
     error?: string;
 }

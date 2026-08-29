@@ -1,43 +1,10 @@
-import {
-    collection,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    doc,
-    getDocs,
-    getDoc,
-    query,
-    where,
-    Timestamp,
-    type DocumentData} from "firebase/firestore";
-import { db } from "../../../firebase";
+import { supabase } from "../../../supabase";
 import type { Account, AccountCreateDTO, AccountUpdateDTO } from "../../../types/account";
+import type { Database } from "../../../types/database";
 
-// Collection reference
-const ACCOUNTS_COLLECTION = "accounts";
-
-// Convert Firestore document to Account object
-const documentToAccount = (doc: DocumentData): Account => {
-    const currentBalance = parseFloat(doc.data().currentBalance || doc.data().balance || "0");
-
-    return {
-        id: doc.id,
-        name: doc.data().name,
-        type: doc.data().type,
-        balance: `₹${currentBalance.toLocaleString('en-IN')}`,
-        accountNumber: doc.data().accountNumber || "",
-        status: doc.data().status || "active",
-        openingBalance: doc.data().openingBalance || 0,
-        currentBalance: currentBalance,
-        description: doc.data().description || "",
-        lastTransaction: doc.data().lastTransaction ?
-            doc.data().lastTransaction.toDate().toISOString().split('T')[0] :
-            new Date().toISOString().split('T')[0],
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date(),
-        icon: doc.data().icon || getDefaultIcon(doc.data().type)
-    };
-};
+type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
+type AccountInsert = Database["public"]["Tables"]["accounts"]["Insert"];
+type AccountUpdate = Database["public"]["Tables"]["accounts"]["Update"];
 
 // Helper to get default icon based on account type
 const getDefaultIcon = (type: string): string => {
@@ -52,38 +19,79 @@ const getDefaultIcon = (type: string): string => {
     return iconMap[type] || "bi-wallet2";
 };
 
+// Convert Supabase row to Account object
+const rowToAccount = (row: AccountRow): Account => {
+    const currentBalance = typeof row.current_balance === "number" ? row.current_balance : parseFloat(String(row.current_balance || "0")) || 0;
+    const openingBalance = typeof row.opening_balance === "number" ? row.opening_balance : parseFloat(String(row.opening_balance || "0")) || 0;
+
+    let createdAt: Date | undefined;
+    if (row.created_at) {
+        createdAt = new Date(row.created_at);
+    }
+
+    let updatedAt: Date | undefined;
+    if (row.updated_at) {
+        updatedAt = new Date(row.updated_at);
+    }
+
+    let lastTransaction = new Date().toISOString().split("T")[0];
+    if (row.last_transaction) {
+        try {
+            lastTransaction = new Date(row.last_transaction).toISOString().split("T")[0];
+        } catch {
+            lastTransaction = String(row.last_transaction);
+        }
+    }
+
+    return {
+        id: String(row.id),
+        name: row.name,
+        type: row.type,
+        balance: `₹${currentBalance.toLocaleString("en-IN")}`,
+        accountNumber: row.account_number || "",
+        status: (row.status as "active" | "inactive" | "pending") || "active",
+        openingBalance,
+        currentBalance,
+        description: row.description || "",
+        lastTransaction,
+        createdAt: createdAt || new Date(),
+        updatedAt: updatedAt || new Date(),
+        icon: row.icon || getDefaultIcon(row.type),
+        userId: row.user_id,
+    };
+};
+
 // Account Service
 export const accountService = {
     // Create new account
     async createAccount(accountData: AccountCreateDTO, userId: string): Promise<Account> {
         try {
-            const now = Timestamp.now();
-            const accountToCreate = {
-                ...accountData,
-                userId,
-                status: "active",
-                currentBalance: parseFloat(accountData.openingBalance.toString()) || 0,
-                createdAt: now,
-                updatedAt: now
-            };
+            const openingBal = parseFloat(accountData.openingBalance?.toString() || "0") || 0;
+            const now = new Date().toISOString();
 
-            const docRef = await addDoc(collection(db, ACCOUNTS_COLLECTION), accountToCreate);
-
-            return {
-                id: docRef.id,
+            const newAccountRow: AccountInsert = {
+                user_id: userId,
                 name: accountData.name,
                 type: accountData.type,
-                balance: `₹${(parseFloat(accountData.openingBalance.toString()) || 0).toLocaleString('en-IN')}`,
-                accountNumber: accountData.accountNumber || "",
-                status: "active" as const,
-                openingBalance: parseFloat(accountData.openingBalance.toString()) || 0,
-                currentBalance: parseFloat(accountData.openingBalance.toString()) || 0,
+                account_number: accountData.accountNumber || "",
+                status: "active",
+                opening_balance: openingBal,
+                current_balance: openingBal,
                 description: accountData.description || "",
-                lastTransaction: new Date().toISOString().split('T')[0],
-                createdAt: accountToCreate.createdAt.toDate(),
-                updatedAt: accountToCreate.updatedAt.toDate(),
-                icon: getDefaultIcon(accountData.type)
+                icon: getDefaultIcon(accountData.type),
+                last_transaction: now.split("T")[0],
+                created_at: now,
+                updated_at: now,
             };
+
+            const { data, error } = await supabase
+                .from("accounts")
+                .insert([newAccountRow])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return rowToAccount(data as AccountRow);
         } catch (error) {
             console.error("Error creating account:", error);
             throw error;
@@ -93,13 +101,14 @@ export const accountService = {
     // Get all accounts for a user
     async getAccounts(userId: string): Promise<Account[]> {
         try {
-            const q = query(
-                collection(db, ACCOUNTS_COLLECTION),
-                where("userId", "==", userId)
-            );
+            const { data, error } = await supabase
+                .from("accounts")
+                .select("*")
+                .eq("user_id", userId)
+                .order("created_at", { ascending: false });
 
-            const querySnapshot = await getDocs(q);
-            return querySnapshot.docs.map(documentToAccount);
+            if (error) throw error;
+            return (data || []).map((row) => rowToAccount(row as AccountRow));
         } catch (error) {
             console.error("Error fetching accounts:", error);
             throw error;
@@ -109,13 +118,14 @@ export const accountService = {
     // Get single account by ID
     async getAccountById(accountId: string): Promise<Account | null> {
         try {
-            const docRef = doc(db, ACCOUNTS_COLLECTION, accountId);
-            const docSnap = await getDoc(docRef);
+            const { data, error } = await supabase
+                .from("accounts")
+                .select("*")
+                .eq("id", accountId)
+                .maybeSingle();
 
-            if (docSnap.exists()) {
-                return documentToAccount({ id: docSnap.id, ...docSnap.data() });
-            }
-            return null;
+            if (error) throw error;
+            return data ? rowToAccount(data as AccountRow) : null;
         } catch (error) {
             console.error("Error fetching account:", error);
             throw error;
@@ -125,11 +135,23 @@ export const accountService = {
     // Update account
     async updateAccount(accountId: string, accountData: AccountUpdateDTO): Promise<void> {
         try {
-            const docRef = doc(db, ACCOUNTS_COLLECTION, accountId);
-            await updateDoc(docRef, {
-                ...accountData,
-                updatedAt: Timestamp.now()
-            });
+            const updates: AccountUpdate = {
+                updated_at: new Date().toISOString(),
+            };
+            if (accountData.name !== undefined) updates.name = accountData.name;
+            if (accountData.type !== undefined) {
+                updates.type = accountData.type;
+                updates.icon = getDefaultIcon(accountData.type);
+            }
+            if (accountData.status !== undefined) updates.status = accountData.status;
+            if (accountData.description !== undefined) updates.description = accountData.description;
+
+            const { error } = await supabase
+                .from("accounts")
+                .update(updates)
+                .eq("id", accountId);
+
+            if (error) throw error;
         } catch (error) {
             console.error("Error updating account:", error);
             throw error;
@@ -139,8 +161,12 @@ export const accountService = {
     // Delete account
     async deleteAccount(accountId: string): Promise<void> {
         try {
-            const docRef = doc(db, ACCOUNTS_COLLECTION, accountId);
-            await deleteDoc(docRef);
+            const { error } = await supabase
+                .from("accounts")
+                .delete()
+                .eq("id", accountId);
+
+            if (error) throw error;
         } catch (error) {
             console.error("Error deleting account:", error);
             throw error;

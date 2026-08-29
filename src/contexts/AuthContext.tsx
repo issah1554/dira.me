@@ -1,14 +1,16 @@
-// src/context/AuthContext.tsx
+// src/contexts/AuthContext.tsx
 import { createContext, useContext, type ReactNode } from "react";
-import { useAuth as useAuthHook } from "../features/auth/hooks/useAuth";
+import { useAuth as useAuthHook, type AuthUser } from "../features/auth/hooks/useAuth";
 
 interface AuthContextValue {
-    user: any;
+    user: AuthUser | null;
     loading: boolean;
     error: string | null;
-    register: (email: string, password: string) => Promise<void>;
-    login: (email: string, password: string) => Promise<void>;
+    register: (email: string, password: string) => Promise<AuthUser | null>;
+    login: (email: string, password: string) => Promise<AuthUser | null>;
     logout: () => Promise<void>;
+    resetPassword: (email: string) => Promise<void>;
+    updatePassword: (password: string) => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);

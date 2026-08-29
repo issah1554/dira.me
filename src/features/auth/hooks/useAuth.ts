@@ -1,17 +1,19 @@
 // src/hooks/useAuth.ts
 import { useState, useEffect, useCallback } from "react";
-import type { User } from "firebase/auth";
 import * as authService from "../services/authService";
+import type { AuthUser } from "../services/authService";
+
+export type { AuthUser };
 
 export const useAuth = () => {
-    const [user, setUser] = useState<User | null>(null);
+    const [user, setUser] = useState<AuthUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const unsubscribe = authService.subscribeAuth(
-            (firebaseUser) => {
-                setUser(firebaseUser);
+            (authUser) => {
+                setUser(authUser);
                 setLoading(false);
             },
             (error) => {
@@ -28,8 +30,10 @@ export const useAuth = () => {
         try {
             const user = await authService.register(email, password);
             setUser(user);
-        } catch (err: any) {
-            setError(err.message);
+            return user;
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg);
             throw err;
         } finally {
             setLoading(false);
@@ -42,8 +46,10 @@ export const useAuth = () => {
         try {
             const user = await authService.login(email, password);
             setUser(user);
-        } catch (err: any) {
-            setError(err.message);
+            return user;
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg);
             throw err;
         } finally {
             setLoading(false);
@@ -56,13 +62,44 @@ export const useAuth = () => {
         try {
             await authService.logout();
             setUser(null);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg);
             throw err;
         } finally {
             setLoading(false);
         }
     }, []);
 
-    return { user, loading, error, register, login, logout };
+    const resetPassword = useCallback(async (email: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            await authService.resetPassword(email);
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const updatePassword = useCallback(async (password: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const user = await authService.updatePassword(password);
+            setUser(user);
+            return user;
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            setError(msg);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    return { user, loading, error, register, login, logout, resetPassword, updatePassword };
 };
