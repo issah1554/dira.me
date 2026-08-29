@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { accountService, formatCurrencyAmount } from '../services/accountService';
 import type { Account, AccountCreateDTO, AccountUpdateDTO, AccountSummary, CurrencyCode } from '../../../types/account';
 import { useAuth } from '../../../contexts/AuthContext';
+import { syncManager } from '../../../lib/offline/syncManager';
 
 export const useAccounts = () => {
     const [accounts, setAccounts] = useState<Account[]>([]);
@@ -133,11 +134,19 @@ export const useAccounts = () => {
         return formatCurrencyAmount(amount, currency);
     };
 
-    // Initialize on mount
+    // Initialize on mount and on sync
     useEffect(() => {
         if (user?.uid) {
             loadAccounts();
         }
+
+        const unsub = syncManager.subscribe((event) => {
+            if (event.type === "sync-complete") {
+                loadAccounts();
+            }
+        });
+
+        return () => unsub();
     }, [user?.uid, loadAccounts]);
 
     return {

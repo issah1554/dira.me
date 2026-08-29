@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { partyService } from "../services/partyService";
 import type { Party, PartyCreateDTO, PartyUpdateDTO } from "../../../types/party";
 import { useAuth } from "../../../contexts/AuthContext";
+import { syncManager } from "../../../lib/offline/syncManager";
 
 export const useParties = () => {
     const [parties, setParties] = useState<Party[]>([]);
@@ -85,6 +86,14 @@ export const useParties = () => {
         if (user?.uid) {
             loadParties();
         }
+
+        const unsub = syncManager.subscribe((event) => {
+            if (event.type === "sync-complete") {
+                loadParties();
+            }
+        });
+
+        return () => unsub();
     }, [user?.uid, loadParties]);
 
     return {

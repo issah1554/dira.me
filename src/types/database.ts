@@ -20,6 +20,13 @@ export type PartyType =
     | "government"
     | "other";
 
+export type TransactionType =
+    | "income"
+    | "expense"
+    | "transfer"
+    | "borrow"
+    | "repayment";
+
 export interface Database {
     public: {
         Tables: {
@@ -114,6 +121,7 @@ export interface Database {
                     user_id?: string;
                     date: string;
                     amount: number;
+                    type: TransactionType;
                     dc: "dr" | "cr";
                     account: string;
                     party_id?: string | null;
@@ -129,7 +137,8 @@ export interface Database {
                     user_id?: string;
                     date: string;
                     amount: number;
-                    dc: "dr" | "cr";
+                    type?: TransactionType;
+                    dc?: "dr" | "cr";
                     account: string;
                     party_id?: string | null;
                     currency?: CurrencyCode;
@@ -144,6 +153,7 @@ export interface Database {
                     user_id?: string;
                     date?: string;
                     amount?: number;
+                    type?: TransactionType;
                     dc?: "dr" | "cr";
                     account?: string;
                     party_id?: string | null;
@@ -163,6 +173,7 @@ export interface DbTransaction {
     id: string;
     date: string;
     amount: number;
+    type: TransactionType;
     dc: "dr" | "cr";
     notes: string;
     account: string;
@@ -178,6 +189,7 @@ export interface DbTransaction {
 export interface TransactionFormData {
     date: string;
     amount: number;
+    type: TransactionType;
     dc: "dr" | "cr";
     notes: string;
     account: string;
@@ -189,6 +201,7 @@ export interface TransactionFormData {
 
 export type TransactionFilter = {
     status?: "completed" | "pending" | "failed";
+    type?: TransactionType;
     account?: string;
     party_id?: string;
     currency?: CurrencyCode;

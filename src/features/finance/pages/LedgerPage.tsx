@@ -11,7 +11,8 @@ import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { useParties } from "../hooks/useParties";
 import { partyTypeIcons, partyTypeColors } from "../services/partyService";
-import type { Transaction } from "../services/TransactionService";
+import { transactionTypeConfig, type Transaction } from "../services/TransactionService";
+import type { TransactionType } from "../../../types/database";
 import Loader from "../../../components/ui/Loaders";
 
 /* =======================
@@ -22,6 +23,14 @@ const getCurrentTimeStr = () => {
     const d = new Date();
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
+
+const transactionTypes: { value: TransactionType; label: string }[] = [
+    { value: "income", label: "Income" },
+    { value: "expense", label: "Expense" },
+    { value: "transfer", label: "Transfer" },
+    { value: "borrow", label: "Borrow / Loan" },
+    { value: "repayment", label: "Repayment" },
+];
 
 /* =======================
    Component
@@ -42,7 +51,7 @@ export default function LedgerPage() {
     const [editingId, setEditingId] = useState<string | null>(null);
 
     const [filterStatus, setFilterStatus] = useState("");
-    const [filterType, setFilterType] = useState("");
+    const [filterType, setFilterType] = useState<string>("");
     const [filterAccount, setFilterAccount] = useState("");
     const [filterParty, setFilterParty] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
@@ -51,8 +60,8 @@ export default function LedgerPage() {
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
         time: getCurrentTimeStr(),
+        type: "expense" as TransactionType,
         amount: "",
-        dc: "cr" as "dr" | "cr", // Default to Cash In
         account: "",
         party_id: "" as string | null,
         category: "General",
@@ -65,8 +74,8 @@ export default function LedgerPage() {
         setFormData({
             date: new Date().toISOString().split("T")[0],
             time: getCurrentTimeStr(),
+            type: "expense",
             amount: "",
-            dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
             party_id: null,
             category: "General",
@@ -79,8 +88,8 @@ export default function LedgerPage() {
         setFormData({
             date: new Date().toISOString().split("T")[0],
             time: getCurrentTimeStr(),
+            type: "expense",
             amount: "",
-            dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
             party_id: null,
             category: "General",
@@ -106,11 +115,13 @@ export default function LedgerPage() {
             }
         }
 
+        const type = (tx.type as TransactionType) || (tx.dc === "cr" ? "income" : "expense");
+
         setFormData({
             date: dateVal,
             time: timeVal,
+            type,
             amount: String(tx.amount),
-            dc: tx.dc,
             account: tx.account,
             party_id: tx.party_id || null,
             category: tx.category || "General",
@@ -145,10 +156,13 @@ export default function LedgerPage() {
             }
         }
 
+        const dc = transactionTypeConfig[formData.type].dc;
+
         const payload = {
             date: fullIsoDate,
             amount: amt,
-            dc: formData.dc,
+            type: formData.type,
+            dc,
             account: formData.account,
             party_id: formData.party_id || null,
             currency,
@@ -179,7 +193,10 @@ export default function LedgerPage() {
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
             if (filterStatus && tx.status !== filterStatus) return false;
-            if (filterType && tx.dc !== filterType) return false;
+            if (filterType) {
+                const txType = tx.type || (tx.dc === "cr" ? "income" : "expense");
+                if (txType !== filterType) return false;
+            }
             if (filterAccount && tx.account !== filterAccount) return false;
             if (filterParty && tx.party_id !== filterParty) return false;
             if (filterDateFrom) {
@@ -241,22 +258,20 @@ export default function LedgerPage() {
         },
 
         {
-            key: "dc",
+            key: "type",
             header: "Type",
             sortable: true,
             priority: 9,
-            render: row => (
-                <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                        row.dc === "cr"
-                            ? "bg-green-100 text-green-700 border border-green-200"
-                            : "bg-red-100 text-red-700 border border-red-200"
-                    }`}
-                >
-                    <i className={`bi ${row.dc === "cr" ? "bi-arrow-down-left" : "bi-arrow-up-right"}`} />
-                    {row.dc === "cr" ? "Cash In" : "Cash Out"}
-                </span>
-            ),
+            render: row => {
+                const typeKey = (row.type as TransactionType) || (row.dc === "cr" ? "income" : "expense");
+                const cfg = transactionTypeConfig[typeKey] || transactionTypeConfig.expense;
+                return (
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
+                        <i className={`bi ${cfg.icon}`} />
+                        {cfg.label}
+                    </span>
+                );
+            },
         },
 
         {
@@ -266,14 +281,15 @@ export default function LedgerPage() {
             priority: 10,
             render: row => {
                 const isUSD = row.currency === "USD";
+                const isCashIn = row.type === "income" || row.type === "borrow" || row.dc === "cr";
                 const formattedAmount = isUSD
                     ? `$ ${row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                     : `${row.amount.toLocaleString()} TZS`;
                 return (
                     <span
-                        className={`font-semibold ${row.dc === "cr" ? "text-green-600" : "text-red-600"}`}
+                        className={`font-semibold ${isCashIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
                     >
-                        {row.dc === "cr" ? "+" : "-"} {formattedAmount}
+                        {isCashIn ? "+" : "-"} {formattedAmount}
                     </span>
                 );
             },
@@ -403,9 +419,10 @@ export default function LedgerPage() {
                         onChange={e => setFilterType(e.target.value)}
                         className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
                     >
-                        <option value="">All Types</option>
-                        <option value="cr">Cash In (+)</option>
-                        <option value="dr">Cash Out (-)</option>
+                        <option value="">All Transaction Types</option>
+                        {transactionTypes.map(t => (
+                            <option key={t.value} value={t.value}>{t.label}</option>
+                        ))}
                     </select>
 
                     <select
@@ -505,45 +522,35 @@ export default function LedgerPage() {
                             />
                         </div>
 
-                        {/* Cash In vs Cash Out Selection */}
-                        <div className="flex gap-3">
-                            <label
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
-                                ${formData.dc === "cr"
-                                    ? "bg-green-100 dark:bg-green-950/40 border-green-500 text-green-700 dark:text-green-300 ring-2 ring-green-500/20"
-                                    : "border-main-300 text-main-600 hover:bg-main-200"}
-                                `}
-                            >
-                                <input
-                                    type="radio"
-                                    name="dc"
-                                    value="cr"
-                                    className="hidden"
-                                    checked={formData.dc === "cr"}
-                                    onChange={() => setFormData(p => ({ ...p, dc: "cr" }))}
-                                />
-                                <i className="bi bi-arrow-down-left-circle-fill text-green-600" />
-                                Cash In
+                        {/* Explicit Transaction Type Selection */}
+                        <div>
+                            <label className="block text-xs font-semibold text-main-700 dark:text-main-300 mb-2 uppercase tracking-wider">
+                                Transaction Type <span className="text-red-500">*</span>
                             </label>
-
-                            <label
-                                className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer border text-sm font-medium transition-colors
-                                ${formData.dc === "dr"
-                                    ? "bg-red-100 dark:bg-red-950/40 border-red-500 text-red-700 dark:text-red-300 ring-2 ring-red-500/20"
-                                    : "border-main-300 text-main-600 hover:bg-main-200"}
-                                `}
-                            >
-                                <input
-                                    type="radio"
-                                    name="dc"
-                                    value="dr"
-                                    className="hidden"
-                                    checked={formData.dc === "dr"}
-                                    onChange={() => setFormData(p => ({ ...p, dc: "dr" }))}
-                                />
-                                <i className="bi bi-arrow-up-right-circle-fill text-red-600" />
-                                Cash Out
-                            </label>
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                                {transactionTypes.map(t => {
+                                    const cfg = transactionTypeConfig[t.value];
+                                    const isSelected = formData.type === t.value;
+                                    return (
+                                        <button
+                                            key={t.value}
+                                            type="button"
+                                            onClick={() => setFormData(p => ({ ...p, type: t.value }))}
+                                            className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? `${cfg.badge} ring-2 ring-primary/40 shadow-sm font-semibold`
+                                                    : "border-main-300 bg-main-100 text-main-600 hover:bg-main-200"
+                                            }`}
+                                        >
+                                            <i className={`bi ${cfg.icon} text-base mb-1 ${isSelected ? cfg.color : "text-main-500"}`} />
+                                            <span className="truncate">{cfg.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <p className="text-[11px] text-main-500 mt-1.5">
+                                {transactionTypeConfig[formData.type]?.description}
+                            </p>
                         </div>
 
                         <TextInput
@@ -589,7 +596,7 @@ export default function LedgerPage() {
                             labelBgColor="bg-main-100"
                             value={formData.category}
                             onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                            placeholder="e.g. Salary, Rent, Food, Utilities, Sales"
+                            placeholder="e.g. Salary, Rent, Loan, Food, Supplies"
                             color="primary"
                             size="md"
                         />

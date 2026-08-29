@@ -139,6 +139,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
+    type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('income', 'expense', 'transfer', 'borrow', 'repayment')),
     dc TEXT NOT NULL CHECK (dc IN ('dr', 'cr')),
     account TEXT NOT NULL,
     party_id UUID REFERENCES public.parties(id) ON DELETE SET NULL,
@@ -160,6 +161,7 @@ CREATE TRIGGER set_transactions_updated_at
 -- Indexes for transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_party_id ON public.transactions(party_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);

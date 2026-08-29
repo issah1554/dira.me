@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useAccounts } from "../../finance/hooks/useAccounts";
 import { useTransactions } from "../../finance/hooks/useTransactions";
+import { transactionTypeConfig } from "../../finance/services/TransactionService";
+import type { TransactionType } from "../../../types/database";
 
 const quickActions = [
     { label: "Add Task", icon: "bi-plus-circle", to: "/todos", color: "bg-primary" },
-    { label: "Ledger", icon: "bi-cash-coin", to: "/finance/ledger", color: "bg-danger" },
-    { label: "View Reports", icon: "bi-bar-chart", to: "/reports", color: "bg-info" },
-    { label: "Manage Budget", icon: "bi-piggy-bank", to: "/finance/budgets", color: "bg-success" },
+    { label: "Ledger", icon: "bi-journal-text", to: "/finance/ledger", color: "bg-danger" },
+    { label: "Parties", icon: "bi-people", to: "/finance/parties", color: "bg-purple-600" },
+    { label: "Accounts", icon: "bi-bank", to: "/finance/accounts", color: "bg-success" },
 ];
 
 export function Dashboard() {
@@ -26,8 +28,9 @@ export function Dashboard() {
         let income = 0;
         let expenses = 0;
         transactions.forEach(t => {
-            if (t.dc === "cr") income += t.amount;
-            else if (t.dc === "dr") expenses += t.amount;
+            const isCashIn = t.type === "income" || t.type === "borrow" || t.dc === "cr";
+            if (isCashIn) income += t.amount;
+            else expenses += t.amount;
         });
         return { totalIncome: income, totalExpenses: expenses };
     }, [transactions]);
@@ -44,26 +47,26 @@ export function Dashboard() {
         {
             label: "Total Cash In",
             value: `${totalIncome.toLocaleString()} TZS`,
-            subtext: "Money received",
+            subtext: "Income & loans received",
             icon: "bi-arrow-down-left-circle",
-            color: "text-success",
-            bg: "bg-success/10",
+            color: "text-emerald-600",
+            bg: "bg-emerald-500/10",
         },
         {
             label: "Total Cash Out",
             value: `${totalExpenses.toLocaleString()} TZS`,
-            subtext: "Money spent",
+            subtext: "Expenses & repayments",
             icon: "bi-arrow-up-right-circle",
-            color: "text-danger",
-            bg: "bg-danger/10",
+            color: "text-rose-600",
+            bg: "bg-rose-500/10",
         },
         {
             label: "Transactions",
             value: String(transactions.length),
             subtext: "Total recorded entries",
             icon: "bi-receipt",
-            color: "text-info",
-            bg: "bg-info/10",
+            color: "text-blue-600",
+            bg: "bg-blue-500/10",
         },
     ];
 
@@ -124,40 +127,43 @@ export function Dashboard() {
                         </div>
                     ) : (
                         <div className="divide-y divide-main-300">
-                            {transactions.slice(0, 5).map(tx => (
-                                <div key={tx.id} className="py-2.5 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                                tx.dc === "cr"
-                                                    ? "bg-green-100 text-green-700"
-                                                    : "bg-red-100 text-red-700"
+                            {transactions.slice(0, 5).map(tx => {
+                                const typeKey = (tx.type as TransactionType) || (tx.dc === "cr" ? "income" : "expense");
+                                const cfg = transactionTypeConfig[typeKey] || transactionTypeConfig.expense;
+                                const isCashIn = typeKey === "income" || typeKey === "borrow" || tx.dc === "cr";
+                                const isUSD = tx.currency === "USD";
+                                const formatted = isUSD ? `$ ${tx.amount.toFixed(2)}` : `${tx.amount.toLocaleString()} TZS`;
+
+                                return (
+                                    <div key={tx.id} className="py-2.5 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${cfg.badge}`}>
+                                                <i className={`bi ${cfg.icon}`} />
+                                            </div>
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm font-medium text-main-800">
+                                                        {tx.notes || tx.category || "Transaction"}
+                                                    </p>
+                                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-main-300 text-main-600 font-medium capitalize">
+                                                        {cfg.label}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-main-500">
+                                                    {tx.account} • {new Date(tx.date).toLocaleDateString("en-GB")}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <span
+                                            className={`text-sm font-semibold ${
+                                                isCashIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                                             }`}
                                         >
-                                            <i
-                                                className={`bi ${
-                                                    tx.dc === "cr" ? "bi-arrow-down-left" : "bi-arrow-up-right"
-                                                }`}
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium text-main-800">
-                                                {tx.notes || tx.category || "Transaction"}
-                                            </p>
-                                            <p className="text-xs text-main-500">
-                                                {tx.account} • {new Date(tx.date).toLocaleDateString("en-GB")}
-                                            </p>
-                                        </div>
+                                            {isCashIn ? "+" : "-"} {formatted}
+                                        </span>
                                     </div>
-                                    <span
-                                        className={`text-sm font-semibold ${
-                                            tx.dc === "cr" ? "text-green-600" : "text-red-600"
-                                        }`}
-                                    >
-                                        {tx.dc === "cr" ? "+" : "-"}{tx.amount.toLocaleString()} TZS
-                                    </span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </div>
