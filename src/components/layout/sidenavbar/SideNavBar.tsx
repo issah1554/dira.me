@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import {
     SideNavLayout,
     SideNavHeader,
@@ -9,6 +10,8 @@ import {
 
 import { NavItems } from "./NavItems";
 import { NavItem } from "./NavItem";
+import { useAuth } from "../../../contexts/AuthContext";
+import { useSidebar } from "../../../contexts/SidebarContext";
 
 function SidebarHeader() {
     const isCollapsed = useSideNavCollapsed();
@@ -39,6 +42,15 @@ function SidebarHeader() {
 
 function SidebarFooter() {
     const isCollapsed = useSideNavCollapsed();
+    const { logout } = useAuth();
+    const navigate = useNavigate();
+    const { closeMobileSidebar } = useSidebar();
+
+    const handleLogout = async () => {
+        closeMobileSidebar();
+        await logout();
+        navigate("/auth/login");
+    };
 
     return (
         <div className={`py-3 space-y-1 ${isCollapsed ? 'px-1' : 'px-3'}`}>
@@ -51,6 +63,7 @@ function SidebarFooter() {
             <NavItem
                 className="rounded-md"
                 label="Logout"
+                onClick={handleLogout}
                 icon={<i className="bi bi-box-arrow-right" />}
             />
         </div>

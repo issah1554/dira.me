@@ -5,4 +5,6 @@
 
 - [ ] Support offline usage and sync automatically when connected back
 - [ ] Implement dirty form to prevent data loss
-- [ ] After clicking a navitem menu in mobile layout close the side bar
+- [x] After clicking a navitem menu in mobile layout close the side bar
+- [ ] Implement issue reporting in-app to record bug reports from users
+- [ ] Add time piccer for transaction

@@ -1,4 +1,4 @@
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { Sidebar } from "./sidenavbar/SideNavBar";
 import TopNav from "./TopNavBar";
@@ -26,8 +26,20 @@ function useResponsive() {
 ======================= */
 function AppLayoutContent() {
     const { isMobile } = useResponsive();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-    const { effectiveCollapsed } = useSidebar();
+    const {
+        effectiveCollapsed,
+        mobileOpen,
+        closeMobileSidebar,
+        toggleMobileSidebar,
+    } = useSidebar();
+    const location = useLocation();
+
+    // Automatically close mobile sidebar whenever route changes
+    useEffect(() => {
+        if (isMobile) {
+            closeMobileSidebar();
+        }
+    }, [location.pathname, isMobile, closeMobileSidebar]);
 
     const mainMargin = isMobile
         ? "ml-0"
@@ -40,11 +52,11 @@ function AppLayoutContent() {
             {/* Sidebar */}
             {!isMobile && <Sidebar />}
 
-            {isMobile && sidebarOpen && (
+            {isMobile && mobileOpen && (
                 <>
                     <div
-                        className="fixed inset-0 bg-black/50 z-30"
-                        onClick={() => setSidebarOpen(false)}
+                        className="fixed inset-0 bg-black/50 z-30 transition-opacity"
+                        onClick={closeMobileSidebar}
                     />
                     <Sidebar />
                 </>
@@ -55,7 +67,7 @@ function AppLayoutContent() {
                 className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${mainMargin}`}
             >
                 <TopNav
-                    toggleSidebar={() => setSidebarOpen((v) => !v)}
+                    toggleSidebar={toggleMobileSidebar}
                     isMobile={isMobile}
                 />
 

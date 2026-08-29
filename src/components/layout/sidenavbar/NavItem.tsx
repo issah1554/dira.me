@@ -1,6 +1,7 @@
 import { useState, useEffect, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSideNavCollapsed } from "./SideNavBarLayout";
+import { useSidebar } from "../../../contexts/SidebarContext";
 
 export type NavItemProps = {
     label: string;
@@ -10,6 +11,7 @@ export type NavItemProps = {
     badge?: number;
     depth?: number;
     className?: string;
+    onClick?: () => void;
 };
 
 export function NavItem({
@@ -19,9 +21,11 @@ export function NavItem({
     subItems,
     badge,
     depth = 0,
-    className,
+    className = "",
+    onClick,
 }: NavItemProps) {
     const isCollapsed = useSideNavCollapsed();
+    const { closeMobileSidebar } = useSidebar();
     const isSubItem = depth > 0;
     const location = useLocation();
     const hasSubItems = !!subItems?.length;
@@ -40,6 +44,18 @@ export function NavItem({
         if (isCollapsed) setIsOpen(false);
     }, [isCollapsed]);
 
+    const handleClick = () => {
+        if (hasSubItems && !isCollapsed) {
+            setIsOpen(v => !v);
+        }
+        if (onClick) {
+            onClick();
+        }
+        if (to && !hasSubItems) {
+            closeMobileSidebar();
+        }
+    };
+
     const paddingLeft = isCollapsed ? 0 : 12 + depth * 20;
 
     const content = (
@@ -50,7 +66,7 @@ export function NavItem({
                 ${isCollapsed ? 'justify-center' : 'justify-between'}
             `}
             style={{ paddingLeft }}
-            onClick={() => hasSubItems && !isCollapsed && setIsOpen(v => !v)}
+            onClick={handleClick}
             title={isCollapsed ? label : undefined}
         >
             {/* Highlight bar */}
@@ -83,7 +99,9 @@ export function NavItem({
             )}
 
             {!isCollapsed && hasSubItems && (
-                <span className="text-xs float-end">{isOpen ? <i className="bi bi-chevron-up" /> : <i className="bi bi-chevron-right" />}</span>
+                <span className="text-xs float-end">
+                    {isOpen ? <i className="bi bi-chevron-up" /> : <i className="bi bi-chevron-right" />}
+                </span>
             )}
 
             {isSubItem && !isCollapsed && (
@@ -91,13 +109,18 @@ export function NavItem({
                     className="absolute left-px top-0 bottom-0 w-px bg-primary"
                 />
             )}
-
         </div>
     );
 
     return (
-        <div className="relative" >
-            {to && !hasSubItems ? <Link to={to}>{content}</Link> : content}
+        <div className="relative">
+            {to && !hasSubItems ? (
+                <Link to={to} onClick={closeMobileSidebar}>
+                    {content}
+                </Link>
+            ) : (
+                content
+            )}
 
             {hasSubItems && isOpen && !isCollapsed && (
                 <div className="bg-main-300">

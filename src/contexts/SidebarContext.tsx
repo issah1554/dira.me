@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 
 const STORAGE_KEY = "sidebar-state";
 
@@ -14,6 +14,10 @@ type SidebarContextType = {
     setIsPinned: (value: boolean) => void;
     togglePin: () => void;
     effectiveCollapsed: boolean;
+    mobileOpen: boolean;
+    setMobileOpen: (value: boolean) => void;
+    closeMobileSidebar: () => void;
+    toggleMobileSidebar: () => void;
 };
 
 const SidebarContext = createContext<SidebarContextType | null>(null);
@@ -40,6 +44,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
     const [isCollapsed, setIsCollapsed] = useState(initialState.isCollapsed);
     const [isPinned, setIsPinned] = useState(initialState.isPinned);
+    const [mobileOpen, setMobileOpen] = useState(false);
 
     // Persist state to localStorage whenever it changes
     useEffect(() => {
@@ -60,6 +65,14 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
         });
     };
 
+    const closeMobileSidebar = useCallback(() => {
+        setMobileOpen(false);
+    }, []);
+
+    const toggleMobileSidebar = useCallback(() => {
+        setMobileOpen(prev => !prev);
+    }, []);
+
     // When pinned, always show as expanded
     const effectiveCollapsed = isPinned ? false : isCollapsed;
 
@@ -72,6 +85,10 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
                 setIsPinned,
                 togglePin,
                 effectiveCollapsed,
+                mobileOpen,
+                setMobileOpen,
+                closeMobileSidebar,
+                toggleMobileSidebar,
             }}
         >
             {children}
