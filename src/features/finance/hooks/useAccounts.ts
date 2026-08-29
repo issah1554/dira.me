@@ -129,11 +129,7 @@ export const useAccounts = () => {
 
     // Format currency
     const formatCurrency = (amount: number): string => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: 'INR',
-            minimumFractionDigits: 2
-        }).format(amount);
+        return `${(amount || 0).toLocaleString()} TZS`;
     };
 
     // Initialize on mount

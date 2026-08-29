@@ -35,6 +35,7 @@ export function TextInput({
     name,
     pattern,
     required,
+    className = "",
     ...rest
 }: TextInputProps) {
     const generatedId = React.useId();
@@ -43,6 +44,7 @@ export function TextInput({
     const [touched, setTouched] = React.useState(false);
     const [invalid, setInvalid] = React.useState(false);
     const [isFocused, setIsFocused] = React.useState(false);
+    const [showPassword, setShowPassword] = React.useState(false);
 
     const handleFocus = () => {
         setIsFocused(true);
@@ -52,18 +54,18 @@ export function TextInput({
         setIsFocused(false);
         setTouched(true);
 
-        const value = e.currentTarget.value;
+        const val = e.currentTarget.value;
         const emailRegex = pattern
             ? new RegExp(pattern)
             : /^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/;
 
         if (type === "email") {
-            setInvalid(!emailRegex.test(value));
+            setInvalid(!emailRegex.test(val));
             return;
         }
 
         if (type === "password") {
-            setInvalid(value.length < 8);
+            setInvalid(val.length < 8);
             return;
         }
 
@@ -158,30 +160,47 @@ export function TextInput({
     const textClasses = colorClasses[effectiveColor].text;
 
     const isDateType = type === "date" || type === "datetime-local" || type === "time" || type === "month";
+    const isPasswordType = type === "password";
+    const resolvedInputType = isPasswordType ? (showPassword ? "text" : "password") : type;
+
     // Always show background when floating
     const shouldShowLabelBg = isFocused || !!value || isDateType;
     const labelClasses = shouldShowLabelBg ? `${labelBgClass} ${roundedClasses[rounded].label}` : "bg-transparent";
 
-
     return (
-        <div className="flex flex-col gap-1 items-start text-left w-full my-3">
-            <div className="relative w-full">
+        <div className={`flex flex-col gap-1 items-start text-left w-full my-3 ${className}`}>
+            <div className="relative w-full flex items-center">
                 <input
                     {...rest}
                     id={inputId}
                     name={name}
-                    type={type}
+                    type={resolvedInputType}
                     pattern={pattern}
                     required={required}
-                    placeholder={label ? (isFocused ? placeholder : "") : placeholder} value={value}
+                    placeholder={label ? (isFocused ? placeholder : "") : placeholder}
+                    value={value}
                     onChange={handleChange}
                     onFocus={handleFocus}
                     onBlur={handleBlur}
                     disabled={disabled}
                     aria-invalid={invalid}
                     aria-describedby={helperText ? `${inputId}-help` : undefined}
-                    className={`${baseClasses} ${roundedClasses[rounded].input} ${sizes[size]} ${inputClasses} w-full `}
+                    className={`${baseClasses} ${roundedClasses[rounded].input} ${sizes[size]} ${inputClasses} w-full ${isPasswordType ? "pr-10" : ""}`}
                 />
+
+                {/* Show / Hide Password Toggler */}
+                {isPasswordType && (
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(prev => !prev)}
+                        tabIndex={-1}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        title={showPassword ? "Hide password" : "Show password"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-main-500 hover:text-main-700 dark:text-main-400 dark:hover:text-main-200 focus:outline-none p-1 transition-colors cursor-pointer"
+                    >
+                        <i className={`bi ${showPassword ? "bi-eye-slash-fill" : "bi-eye-fill"} text-base`} />
+                    </button>
+                )}
 
                 {label && (
                     <label

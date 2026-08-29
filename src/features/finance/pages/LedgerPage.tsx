@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import CollapsibleTable, { type Column } from "../../../components/ui/Table";
 import { Button } from "../../../components/ui/Buttons";
 import { Toast } from "../../../components/ui/Toast";
@@ -22,7 +23,7 @@ export default function LedgerPage() {
         update: updateTransaction,
         remove: removeTransaction,
     } = useTransactions();
-    const { accounts } = useAccounts();
+    const { accounts, loadAccounts } = useAccounts();
 
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -49,10 +50,23 @@ export default function LedgerPage() {
             date: new Date().toISOString().split("T")[0],
             amount: "",
             dc: "cr",
-            account: "",
+            account: accounts.length > 0 ? accounts[0].name : "",
             category: "General",
             notes: "",
         });
+    };
+
+    const handleOpenAdd = () => {
+        setEditingId(null);
+        setFormData({
+            date: new Date().toISOString().split("T")[0],
+            amount: "",
+            dc: "cr",
+            account: accounts.length > 0 ? accounts[0].name : "",
+            category: "General",
+            notes: "",
+        });
+        setOpen(true);
     };
 
     const handleOpenEdit = (tx: Transaction) => {
@@ -76,7 +90,7 @@ export default function LedgerPage() {
             return;
         }
         if (!formData.account) {
-            Toast.fire({ icon: "error", title: "Please select or specify an account" });
+            Toast.fire({ icon: "error", title: "Please select an existing account" });
             return;
         }
 
@@ -96,12 +110,15 @@ export default function LedgerPage() {
             await createTransaction(payload);
         }
 
+        // Refresh accounts so calculated balance updates immediately
+        loadAccounts();
         closeModal();
     };
 
     const handleRemove = async (id: string) => {
         if (window.confirm("Are you sure you want to remove this ledger transaction?")) {
             await removeTransaction(id);
+            loadAccounts();
         }
     };
 
@@ -197,7 +214,18 @@ export default function LedgerPage() {
             ),
         },
 
-        { key: "account", header: "Account", sortable: true, priority: 8 },
+        {
+            key: "account",
+            header: "Account",
+            sortable: true,
+            priority: 8,
+            render: row => (
+                <span className="inline-flex items-center gap-1 font-medium text-main-800">
+                    <i className="bi bi-wallet2 text-xs text-primary" />
+                    {row.account}
+                </span>
+            ),
+        },
 
         {
             key: "category",
@@ -341,18 +369,7 @@ export default function LedgerPage() {
                     <Button
                         color="primary"
                         size="sm"
-                        onClick={() => {
-                            setEditingId(null);
-                            setFormData({
-                                date: new Date().toISOString().split("T")[0],
-                                amount: "",
-                                dc: "cr",
-                                account: "",
-                                category: "General",
-                                notes: "",
-                            });
-                            setOpen(true);
-                        }}
+                        onClick={handleOpenAdd}
                     >
                         <i className="bi bi-plus-lg" /> Add Entry
                     </Button>
@@ -436,35 +453,41 @@ export default function LedgerPage() {
                             size="md"
                         />
 
+                        {/* Account Selection - Only existing accounts permitted */}
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
-                                Account <span className="text-red-500">*</span>
+                                Associated Account <span className="text-red-500">*</span>
                             </label>
                             {accounts.length > 0 ? (
                                 <select
-                                    className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary"
+                                    className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                                     value={formData.account}
                                     onChange={e => setFormData(p => ({ ...p, account: e.target.value }))}
                                     required
                                 >
-                                    <option value="">Select Account</option>
+                                    <option value="">-- Choose Account --</option>
                                     {accounts.map(acc => (
                                         <option key={acc.id} value={acc.name}>
-                                            {acc.name} ({acc.balance})
+                                            {acc.name} ({acc.type}) — Current Balance: {acc.balance}
                                         </option>
                                     ))}
                                 </select>
                             ) : (
-                                <TextInput
-                                    label="Account Name"
-                                    labelBgColor="bg-main-200"
-                                    value={formData.account}
-                                    onChange={e => setFormData(p => ({ ...p, account: e.target.value }))}
-                                    placeholder="e.g. Cash, Bank, Mobile Money"
-                                    required
-                                    color="primary"
-                                    size="md"
-                                />
+                                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-300 text-sm flex flex-col gap-2">
+                                    <div className="flex items-center gap-2 font-semibold">
+                                        <i className="bi bi-exclamation-triangle-fill text-amber-500" />
+                                        No Accounts Found
+                                    </div>
+                                    <p className="text-xs text-main-500">
+                                        Every transaction must be associated with an existing account. Please create an account before adding a transaction.
+                                    </p>
+                                    <Link
+                                        to="/finance/accounts"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-primary/90 transition-colors w-fit mt-1"
+                                    >
+                                        <i className="bi bi-plus-lg" /> Create Account
+                                    </Link>
+                                </div>
                             )}
                         </div>
 
@@ -490,7 +513,12 @@ export default function LedgerPage() {
                             <Button variant="outline" size="sm" onClick={closeModal} color="primary" type="button">
                                 Cancel
                             </Button>
-                            <Button size="sm" color="primary" type="submit">
+                            <Button
+                                size="sm"
+                                color="primary"
+                                type="submit"
+                                disabled={accounts.length === 0}
+                            >
                                 {editingId ? "Save Changes" : "Save Entry"}
                             </Button>
                         </div>
@@ -515,10 +543,7 @@ export default function LedgerPage() {
                     <Button
                         color="primary"
                         size="md"
-                        onClick={() => {
-                            setEditingId(null);
-                            setOpen(true);
-                        }}
+                        onClick={handleOpenAdd}
                     >
                         <i className="bi bi-plus-lg mr-2" /> Add Your First Entry
                     </Button>

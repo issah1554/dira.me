@@ -16,13 +16,15 @@ const getDefaultIcon = (type: string): string => {
         "digital": "bi-wallet",
         "credit": "bi-credit-card"
     };
-    return iconMap[type] || "bi-wallet2";
+    return iconMap[type.toLowerCase()] || "bi-wallet2";
 };
 
-// Convert Supabase row to Account object
-const rowToAccount = (row: AccountRow): Account => {
-    const currentBalance = typeof row.current_balance === "number" ? row.current_balance : parseFloat(String(row.current_balance || "0")) || 0;
+// Convert Supabase row to Account object with calculated balance
+const rowToAccount = (row: AccountRow, calculatedBalance?: number, calculatedLastTx?: string): Account => {
     const openingBalance = typeof row.opening_balance === "number" ? row.opening_balance : parseFloat(String(row.opening_balance || "0")) || 0;
+    const currentBalance = calculatedBalance !== undefined
+        ? calculatedBalance
+        : (typeof row.current_balance === "number" ? row.current_balance : parseFloat(String(row.current_balance || "0")) || 0);
 
     let createdAt: Date | undefined;
     if (row.created_at) {
@@ -34,8 +36,8 @@ const rowToAccount = (row: AccountRow): Account => {
         updatedAt = new Date(row.updated_at);
     }
 
-    let lastTransaction = new Date().toISOString().split("T")[0];
-    if (row.last_transaction) {
+    let lastTransaction = calculatedLastTx || new Date().toISOString().split("T")[0];
+    if (!calculatedLastTx && row.last_transaction) {
         try {
             lastTransaction = new Date(row.last_transaction).toISOString().split("T")[0];
         } catch {
@@ -47,7 +49,7 @@ const rowToAccount = (row: AccountRow): Account => {
         id: String(row.id),
         name: row.name,
         type: row.type,
-        balance: `₹${currentBalance.toLocaleString("en-IN")}`,
+        balance: `${currentBalance.toLocaleString()} TZS`,
         accountNumber: row.account_number || "",
         status: (row.status as "active" | "inactive" | "pending") || "active",
         openingBalance,
@@ -71,7 +73,7 @@ export const accountService = {
 
             const newAccountRow: AccountInsert = {
                 user_id: userId,
-                name: accountData.name,
+                name: accountData.name.trim(),
                 type: accountData.type,
                 account_number: accountData.accountNumber || "",
                 status: "active",
@@ -91,24 +93,64 @@ export const accountService = {
                 .single();
 
             if (error) throw error;
-            return rowToAccount(data as AccountRow);
+            return rowToAccount(data as AccountRow, openingBal);
         } catch (error) {
             console.error("Error creating account:", error);
             throw error;
         }
     },
 
-    // Get all accounts for a user
+    // Get all accounts for a user with dynamically computed balances from transactions
     async getAccounts(userId: string): Promise<Account[]> {
         try {
-            const { data, error } = await supabase
-                .from("accounts")
-                .select("*")
-                .eq("user_id", userId)
-                .order("created_at", { ascending: false });
+            const [accountsResult, transactionsResult] = await Promise.all([
+                supabase
+                    .from("accounts")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .order("created_at", { ascending: false }),
+                supabase
+                    .from("transactions")
+                    .select("*")
+                    .or(`user_id.eq.${userId},user_id.is.null`),
+            ]);
 
-            if (error) throw error;
-            return (data || []).map((row) => rowToAccount(row as AccountRow));
+            if (accountsResult.error) throw accountsResult.error;
+
+            const transactions = transactionsResult.data || [];
+
+            return (accountsResult.data || []).map((accountRow) => {
+                // Find all transactions associated with this account (by name or by id)
+                const accountTxList = transactions.filter(
+                    (tx) => tx.account?.trim().toLowerCase() === accountRow.name?.trim().toLowerCase() ||
+                            tx.account === accountRow.id
+                );
+
+                let net = 0;
+                let latestDate = accountRow.last_transaction || "";
+
+                accountTxList.forEach((tx) => {
+                    const amt = Number(tx.amount) || 0;
+                    if (tx.status !== "failed") {
+                        if (tx.dc === "cr") {
+                            net += amt; // Cash In
+                        } else if (tx.dc === "dr") {
+                            net -= amt; // Cash Out
+                        }
+                    }
+                    if (tx.date) {
+                        const txDateStr = tx.date.split("T")[0];
+                        if (!latestDate || txDateStr > latestDate) {
+                            latestDate = txDateStr;
+                        }
+                    }
+                });
+
+                const openingBal = Number(accountRow.opening_balance) || 0;
+                const dynamicCurrentBalance = openingBal + net;
+
+                return rowToAccount(accountRow as AccountRow, dynamicCurrentBalance, latestDate);
+            });
         } catch (error) {
             console.error("Error fetching accounts:", error);
             throw error;
@@ -125,7 +167,25 @@ export const accountService = {
                 .maybeSingle();
 
             if (error) throw error;
-            return data ? rowToAccount(data as AccountRow) : null;
+            if (!data) return null;
+
+            // Fetch transactions for this account to compute current balance
+            const { data: txData } = await supabase
+                .from("transactions")
+                .select("*")
+                .or(`account.eq.${data.name},account.eq.${data.id}`);
+
+            let net = 0;
+            (txData || []).forEach((tx) => {
+                const amt = Number(tx.amount) || 0;
+                if (tx.status !== "failed") {
+                    if (tx.dc === "cr") net += amt;
+                    else if (tx.dc === "dr") net -= amt;
+                }
+            });
+
+            const openingBal = Number(data.opening_balance) || 0;
+            return rowToAccount(data as AccountRow, openingBal + net);
         } catch (error) {
             console.error("Error fetching account:", error);
             throw error;
@@ -138,7 +198,7 @@ export const accountService = {
             const updates: AccountUpdate = {
                 updated_at: new Date().toISOString(),
             };
-            if (accountData.name !== undefined) updates.name = accountData.name;
+            if (accountData.name !== undefined) updates.name = accountData.name.trim();
             if (accountData.type !== undefined) {
                 updates.type = accountData.type;
                 updates.icon = getDefaultIcon(accountData.type);
@@ -184,10 +244,7 @@ export const accountService = {
             const activeAccounts = accounts.filter(acc => acc.status === "active");
 
             const totalBalance = activeAccounts.reduce((sum, acc) => {
-                const balance = typeof acc.currentBalance === 'number'
-                    ? acc.currentBalance
-                    : parseFloat(String(acc.currentBalance || "0").replace(/[^0-9.-]+/g, ""));
-                return sum + balance;
+                return sum + (acc.currentBalance || 0);
             }, 0);
 
             const uniqueTypes = new Set(activeAccounts.map(acc => acc.type));
