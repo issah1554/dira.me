@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTheme } from "../../contexts/ThemeContext";
 import { useNetwork } from "../../contexts/NetworkContext";
+import { usePwaInstall } from "../../contexts/PwaInstallContext";
 import Avatar from "../ui/Avatar";
 
 interface TopNavProps {
@@ -15,6 +16,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
     const navigate = useNavigate();
     const { toggleTheme } = useTheme();
     const { isOnline, isSyncing, pendingCount, lastSyncedAt } = useNetwork();
+    const { isInstallable, promptInstall } = usePwaInstall();
 
     const [open, setOpen] = useState<"notif" | "msg" | "profile" | null>(null);
     const navRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,18 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
 
                 {/* Right section */}
                 <div className="flex items-center gap-2 sm:gap-4">
+                    {/* PWA Install Button */}
+                    {isInstallable && (
+                        <button
+                            onClick={promptInstall}
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition-all shadow-sm cursor-pointer animate-fade-in"
+                            title="Install Dira App on your desktop/mobile with offline support and shortcuts"
+                            aria-label="Install App"
+                        >
+                            <i className="bi bi-download text-xs" />
+                            <span className="hidden sm:inline">Install App</span>
+                        </button>
+                    )}
                     {/* Offline & Sync Status Indicator */}
                     {!isOnline ? (
                         <div

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="dira-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#1e3a8a" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect width="512" height="512" rx="128" fill="url(#dira-grad)" />
+
+  <!-- Inner Compass Design -->
+  <g filter="url(#shadow)" transform="translate(256, 256) scale(18)">
+    <path fill="#ffffff" fill-opacity="0.95" d="M0 -7a7 7 0 1 0 0 14 7 7 0 0 0 0 -14zm0 1.2a5.8 5.8 0 1 1 0 11.6 5.8 5.8 0 0 1 0 -11.6z"/>
+    <!-- North Pointer (Accent Red/Coral) -->
+    <path fill="#f43f5e" d="M0 -5.8 L2 0 L0 -0.5 L-2 0 Z"/>
+    <!-- South Pointer (White/Silver) -->
+    <path fill="#e2e8f0" d="M0 5.8 L2 0 L0 0.5 L-2 0 Z"/>
+    <!-- Center Pivot Pin -->
+    <circle cx="0" cy="0" r="1" fill="#ffffff"/>
+  </g>
+</svg>

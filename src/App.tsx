@@ -10,6 +10,7 @@ import { AppLayout } from "./components/layout/AppLayout";
 import { Dashboard } from "./features/home/pages/Dashboard";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { NetworkProvider } from "./contexts/NetworkContext";
+import { PwaInstallProvider } from "./contexts/PwaInstallContext";
 import Ledger from "./features/finance/pages/LedgerPage";
 import Budgets from "./features/finance/pages/BudgetPage";
 import Accounts from "./features/finance/pages/Accounts";
@@ -29,47 +30,49 @@ function App() {
     <BrowserRouter basename={import.meta.env.BASE_URL}>
       <AuthProvider>
         <NetworkProvider>
-          <ThemeProvider>
-            <Routes>
-              {/* public */}
-              <Route path="/" element={<LandingPage />} />
+          <PwaInstallProvider>
+            <ThemeProvider>
+              <Routes>
+                {/* public */}
+                <Route path="/" element={<LandingPage />} />
 
-              {/* auth */}
-              <Route path="/auth" element={<AuthLayout />}>
-                <Route path="login" element={<LoginPage />} />
-                <Route path="register" element={<RegisterPage />} />
-                <Route path="forgot-password" element={<ForgotPasswordPage />} />
-                <Route path="reset-password" element={<ResetPasswordPage />} />
-              </Route>
+                {/* auth */}
+                <Route path="/auth" element={<AuthLayout />}>
+                  <Route path="login" element={<LoginPage />} />
+                  <Route path="register" element={<RegisterPage />} />
+                  <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                  <Route path="reset-password" element={<ResetPasswordPage />} />
+                </Route>
 
-              {/* app layout */}
-              <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-                <Route path="/home" element={<Dashboard />} />
+                {/* app layout */}
+                <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+                  <Route path="/home" element={<Dashboard />} />
 
-                {/* Todo Management */}
-                <Route path="/todos" element={<TodoList />} />
-                <Route path="/todos/categories" element={<TodoCategories />} />
+                  {/* Todo Management */}
+                  <Route path="/todos" element={<TodoList />} />
+                  <Route path="/todos/categories" element={<TodoCategories />} />
 
-                {/* Finance Management */}
-                <Route path="/finance/ledger" element={<Ledger />} />
-                <Route path="/finance/parties" element={<PartiesPage />} />
-                <Route path="/finance/budgets" element={<Budgets />} />
-                <Route path="/finance/accounts" element={<Accounts />} />
-                <Route path="/finance/accounts2" element={<AccountsGridPage />} />
+                  {/* Finance Management */}
+                  <Route path="/finance/ledger" element={<Ledger />} />
+                  <Route path="/finance/parties" element={<PartiesPage />} />
+                  <Route path="/finance/budgets" element={<Budgets />} />
+                  <Route path="/finance/accounts" element={<Accounts />} />
+                  <Route path="/finance/accounts2" element={<AccountsGridPage />} />
 
-                {/* Reports & Analytics */}
-                <Route path="/reports" element={<Reports />} />
+                  {/* Reports & Analytics */}
+                  <Route path="/reports" element={<Reports />} />
 
-                {/* Settings & Help */}
-                <Route path="/settings" element={<Settings />} />
-                <Route path="/help" element={<Help />} />
-                <Route path="/notifications" element={<Notifications />} />
-              </Route>
+                  {/* Settings & Help */}
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="/help" element={<Help />} />
+                  <Route path="/notifications" element={<Notifications />} />
+                </Route>
 
-              {/* fallback */}
-              <Route path="*" element={<StatusPage status="not-found" />} />
-            </Routes>
-          </ThemeProvider>
+                {/* fallback */}
+                <Route path="*" element={<StatusPage status="not-found" />} />
+              </Routes>
+            </ThemeProvider>
+          </PwaInstallProvider>
         </NetworkProvider>
       </AuthProvider>
     </BrowserRouter>

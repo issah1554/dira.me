@@ -12,6 +12,7 @@ import { NavItems } from "./NavItems";
 import { NavItem } from "./NavItem";
 import { useAuth } from "../../../contexts/AuthContext";
 import { useSidebar } from "../../../contexts/SidebarContext";
+import { usePwaInstall } from "../../../contexts/PwaInstallContext";
 
 function SidebarHeader() {
     const isCollapsed = useSideNavCollapsed();
@@ -45,6 +46,7 @@ function SidebarFooter() {
     const { logout } = useAuth();
     const navigate = useNavigate();
     const { closeMobileSidebar } = useSidebar();
+    const { isInstallable, promptInstall } = usePwaInstall();
 
     const handleLogout = async () => {
         closeMobileSidebar();
@@ -54,6 +56,15 @@ function SidebarFooter() {
 
     return (
         <div className={`py-3 space-y-1 ${isCollapsed ? 'px-1' : 'px-3'}`}>
+            {/* Install App Button */}
+            {isInstallable && (
+                <NavItem
+                    className="rounded-md text-primary font-semibold"
+                    label="Install App"
+                    onClick={promptInstall}
+                    icon={<i className="bi bi-download" />}
+                />
+            )}
             <NavItem
                 className="rounded-md"
                 label="Help & Support"
@@ -69,6 +80,7 @@ function SidebarFooter() {
         </div>
     );
 }
+
 
 export function Sidebar() {
     return (
