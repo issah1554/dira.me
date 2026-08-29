@@ -1,6 +1,7 @@
 // src/lib/offline/syncManager.ts
 import { supabase } from "../../supabase";
 import { offlineDb, type SyncQueueItem } from "./offlineDb";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type SyncEventListener = (event: {
     type: "sync-start" | "sync-complete" | "sync-error" | "queue-changed" | "online-status-changed";
@@ -10,39 +11,111 @@ type SyncEventListener = (event: {
 class SyncManager {
     private isSyncing = false;
     private listeners: Set<SyncEventListener> = new Set();
-    private checkInterval: any = null;
+    private realtimeChannel: RealtimeChannel | null = null;
 
     constructor() {
         if (typeof window !== "undefined") {
+            // Event 1: Browser comes back online
             window.addEventListener("online", () => {
                 this.notify({ type: "online-status-changed", data: { online: true } });
                 this.syncAll();
             });
 
+            // Event 2: Browser goes offline
             window.addEventListener("offline", () => {
                 this.notify({ type: "online-status-changed", data: { online: false } });
             });
 
+            // Event 3: Tab or window visibility state changes to visible / active
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible" && this.isOnline()) {
+                    this.syncAll();
+                }
+            });
+
+            // Event 4: Window receives focus
             window.addEventListener("focus", () => {
                 if (this.isOnline()) {
                     this.syncAll();
                 }
             });
 
-            // Periodic sync check every 60 seconds when online
-            this.checkInterval = setInterval(() => {
-                if (this.isOnline()) {
+            // Event 5: Auth state changes (user signs in / signs out)
+            supabase.auth.onAuthStateChange((event, session) => {
+                if (event === "SIGNED_IN" && session?.user) {
+                    this.setupRealtimeSubscription(session.user.id);
                     this.syncAll();
+                } else if (event === "SIGNED_OUT") {
+                    this.teardownRealtimeSubscription();
                 }
-            }, 60000);
+            });
+
+            // Initial check on load
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (user) {
+                    this.setupRealtimeSubscription(user.id);
+                }
+            });
+        }
+    }
+
+    /**
+     * Set up event-driven Supabase Realtime WebSocket subscription.
+     * Triggers sync/cache refresh when changes happen on the database in real time.
+     */
+    private setupRealtimeSubscription(userId: string) {
+        if (this.realtimeChannel) {
+            this.teardownRealtimeSubscription();
+        }
+
+        this.realtimeChannel = supabase
+            .channel(`user-sync-${userId}`)
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "transactions" },
+                () => {
+                    if (this.isOnline() && !this.isSyncing) {
+                        this.refreshLocalCache(userId).then(() => {
+                            this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                        });
+                    }
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "accounts" },
+                () => {
+                    if (this.isOnline() && !this.isSyncing) {
+                        this.refreshLocalCache(userId).then(() => {
+                            this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                        });
+                    }
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "parties" },
+                () => {
+                    if (this.isOnline() && !this.isSyncing) {
+                        this.refreshLocalCache(userId).then(() => {
+                            this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                        });
+                    }
+                }
+            )
+            .subscribe();
+    }
+
+    private teardownRealtimeSubscription() {
+        if (this.realtimeChannel) {
+            supabase.removeChannel(this.realtimeChannel);
+            this.realtimeChannel = null;
         }
     }
 
     public destroy() {
-        if (this.checkInterval) {
-            clearInterval(this.checkInterval);
-            this.checkInterval = null;
-        }
+        this.teardownRealtimeSubscription();
+        this.listeners.clear();
     }
 
     public isOnline(): boolean {
@@ -82,7 +155,34 @@ class SyncManager {
     }
 
     /**
-     * Main sync routine: processes queue, drains it to Supabase, then refreshes local cache
+     * Executes when the user performs any mutation (create, edit, delete).
+     * If online, displays the syncing indicator, runs the mutation, drains any pending queue,
+     * updates last_synced_at, and notifies UI components.
+     */
+    public async onUserMutation<T>(mutationFn: () => Promise<T>): Promise<T> {
+        if (this.isOnline()) {
+            this.notify({ type: "sync-start" });
+            try {
+                const result = await mutationFn();
+                const pending = await this.getPendingQueueCount();
+                if (pending > 0) {
+                    await this.syncAll();
+                } else {
+                    await offlineDb.setMeta("last_synced_at", new Date().toISOString());
+                    this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                }
+                return result;
+            } catch (err) {
+                this.notify({ type: "sync-error", data: err });
+                throw err;
+            }
+        } else {
+            return await mutationFn();
+        }
+    }
+
+    /**
+     * Main event-driven sync routine: processes queued items, drains them to Supabase, then refreshes local cache
      */
     public async syncAll(): Promise<{ success: boolean; processed: number; errors: number }> {
         if (this.isSyncing) {
@@ -124,7 +224,7 @@ class SyncManager {
                 }
             }
 
-            // If we successfully processed queue items (or had empty queue), pull fresh data to refresh local cache
+            // Refresh local cache with latest data from Supabase
             if (this.isOnline()) {
                 await this.refreshLocalCache(user.id);
                 await offlineDb.setMeta("last_synced_at", new Date().toISOString());

@@ -3,6 +3,7 @@ import { supabase } from "../../../supabase";
 import type { CurrencyCode } from "../../../types/account";
 import type { Database, TransactionType } from "../../../types/database";
 import { offlineDb } from "../../../lib/offline/offlineDb";
+import { syncManager } from "../../../lib/offline/syncManager";
 
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type TransactionUpdate = Database["public"]["Tables"]["transactions"]["Update"];
@@ -157,50 +158,60 @@ export const TransactionService = {
     },
 
     async create(payload: TransactionDTO): Promise<Transaction> {
-        const user = (await supabase.auth.getUser()).data.user;
-        const now = new Date().toISOString();
-        const txId = crypto.randomUUID ? crypto.randomUUID() : `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        return await syncManager.onUserMutation(async () => {
+            const user = (await supabase.auth.getUser()).data.user;
+            const now = new Date().toISOString();
+            const txId = crypto.randomUUID ? crypto.randomUUID() : `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-        const type = payload.type || (payload.dc === "cr" ? "income" : "expense");
-        const isCashIn = type === "income" || type === "borrow" || type === "collection";
-        const dc = payload.dc || (isCashIn ? "cr" : "dr");
+            const type = payload.type || (payload.dc === "cr" ? "income" : "expense");
+            const isCashIn = type === "income" || type === "borrow" || type === "collection";
+            const dc = payload.dc || (isCashIn ? "cr" : "dr");
 
-        const newRow: TransactionRow = {
-            id: txId,
-            user_id: user?.id,
-            date: payload.date ? new Date(payload.date).toISOString() : now,
-            amount: payload.amount,
-            type,
-            dc,
-            account: payload.account,
-            party_id: payload.party_id || null,
-            currency: payload.currency || "TZS",
-            notes: payload.notes || "",
-            category: payload.category || "",
-            status: payload.status || "completed",
-            created_at: now,
-            updated_at: now,
-        };
+            const newRow: TransactionRow = {
+                id: txId,
+                user_id: user?.id,
+                date: payload.date ? new Date(payload.date).toISOString() : now,
+                amount: payload.amount,
+                type,
+                dc,
+                account: payload.account,
+                party_id: payload.party_id || null,
+                currency: payload.currency || "TZS",
+                notes: payload.notes || "",
+                category: payload.category || "",
+                status: payload.status || "completed",
+                created_at: now,
+                updated_at: now,
+            };
 
-        // 1. Write immediately to local IndexedDB
-        await offlineDb.put("transactions", newRow);
+            // 1. Write immediately to local IndexedDB
+            await offlineDb.put("transactions", newRow);
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { data, error } = await supabase
-                    .from("transactions")
-                    .insert([newRow])
-                    .select()
-                    .single();
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { data, error } = await supabase
+                        .from("transactions")
+                        .insert([newRow])
+                        .select()
+                        .single();
 
-                if (error) throw error;
-                if (data) {
-                    await offlineDb.put("transactions", data);
-                    return rowToTransaction(data as TransactionRow);
+                    if (error) throw error;
+                    if (data) {
+                        await offlineDb.put("transactions", data);
+                        return rowToTransaction(data as TransactionRow);
+                    }
+                } catch (err) {
+                    console.warn("Online transaction creation failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "transactions",
+                        action: "insert",
+                        recordId: txId,
+                        payload: newRow,
+                        userId: user?.id || "",
+                    });
                 }
-            } catch (err) {
-                console.warn("Online transaction creation failed, queueing:", err);
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "transactions",
                     action: "insert",
@@ -209,57 +220,59 @@ export const TransactionService = {
                     userId: user?.id || "",
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "transactions",
-                action: "insert",
-                recordId: txId,
-                payload: newRow,
-                userId: user?.id || "",
-            });
-        }
 
-        return rowToTransaction(newRow);
+            return rowToTransaction(newRow);
+        });
     },
 
     async update(id: string, payload: Partial<TransactionDTO>): Promise<void> {
-        const cached = await offlineDb.getById<TransactionRow>("transactions", id);
-        const updateData: TransactionUpdate = {
-            updated_at: new Date().toISOString(),
-        };
+        return await syncManager.onUserMutation(async () => {
+            const cached = await offlineDb.getById<TransactionRow>("transactions", id);
+            const updateData: TransactionUpdate = {
+                updated_at: new Date().toISOString(),
+            };
 
-        if (payload.date !== undefined) updateData.date = new Date(payload.date).toISOString();
-        if (payload.amount !== undefined) updateData.amount = payload.amount;
-        if (payload.type !== undefined) {
-            updateData.type = payload.type;
-            const isCashIn = payload.type === "income" || payload.type === "borrow" || payload.type === "collection";
-            updateData.dc = payload.dc || (isCashIn ? "cr" : "dr");
-        } else if (payload.dc !== undefined) {
-            updateData.dc = payload.dc;
-        }
-        if (payload.account !== undefined) updateData.account = payload.account;
-        if (payload.party_id !== undefined) updateData.party_id = payload.party_id;
-        if (payload.currency !== undefined) updateData.currency = payload.currency;
-        if (payload.notes !== undefined) updateData.notes = payload.notes;
-        if (payload.category !== undefined) updateData.category = payload.category;
-        if (payload.status !== undefined) updateData.status = payload.status;
+            if (payload.date !== undefined) updateData.date = new Date(payload.date).toISOString();
+            if (payload.amount !== undefined) updateData.amount = payload.amount;
+            if (payload.type !== undefined) {
+                updateData.type = payload.type;
+                const isCashIn = payload.type === "income" || payload.type === "borrow" || payload.type === "collection";
+                updateData.dc = payload.dc || (isCashIn ? "cr" : "dr");
+            } else if (payload.dc !== undefined) {
+                updateData.dc = payload.dc;
+            }
+            if (payload.account !== undefined) updateData.account = payload.account;
+            if (payload.party_id !== undefined) updateData.party_id = payload.party_id;
+            if (payload.currency !== undefined) updateData.currency = payload.currency;
+            if (payload.notes !== undefined) updateData.notes = payload.notes;
+            if (payload.category !== undefined) updateData.category = payload.category;
+            if (payload.status !== undefined) updateData.status = payload.status;
 
-        // 1. Update IndexedDB immediately
-        if (cached) {
-            await offlineDb.put("transactions", { ...cached, ...updateData });
-        }
+            // 1. Update IndexedDB immediately
+            if (cached) {
+                await offlineDb.put("transactions", { ...cached, ...updateData });
+            }
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { error } = await supabase
-                    .from("transactions")
-                    .update(updateData)
-                    .eq("id", id);
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase
+                        .from("transactions")
+                        .update(updateData)
+                        .eq("id", id);
 
-                if (error) throw error;
-            } catch (err) {
-                console.warn("Online transaction update failed, queueing:", err);
+                    if (error) throw error;
+                } catch (err) {
+                    console.warn("Online transaction update failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "transactions",
+                        action: "update",
+                        recordId: id,
+                        payload: updateData,
+                        userId: cached?.user_id || "",
+                    });
+                }
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "transactions",
                     action: "update",
@@ -268,34 +281,36 @@ export const TransactionService = {
                     userId: cached?.user_id || "",
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "transactions",
-                action: "update",
-                recordId: id,
-                payload: updateData,
-                userId: cached?.user_id || "",
-            });
-        }
+        });
     },
 
     async remove(id: string): Promise<void> {
-        const cached = await offlineDb.getById<TransactionRow>("transactions", id);
+        return await syncManager.onUserMutation(async () => {
+            const cached = await offlineDb.getById<TransactionRow>("transactions", id);
 
-        // 1. Remove from IndexedDB immediately
-        await offlineDb.deleteItem("transactions", id);
+            // 1. Remove from IndexedDB immediately
+            await offlineDb.deleteItem("transactions", id);
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { error } = await supabase
-                    .from("transactions")
-                    .delete()
-                    .eq("id", id);
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase
+                        .from("transactions")
+                        .delete()
+                        .eq("id", id);
 
-                if (error) throw error;
-            } catch (err) {
-                console.warn("Online transaction remove failed, queueing:", err);
+                    if (error) throw error;
+                } catch (err) {
+                    console.warn("Online transaction remove failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "transactions",
+                        action: "delete",
+                        recordId: id,
+                        payload: {},
+                        userId: cached?.user_id || "",
+                    });
+                }
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "transactions",
                     action: "delete",
@@ -304,14 +319,6 @@ export const TransactionService = {
                     userId: cached?.user_id || "",
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "transactions",
-                action: "delete",
-                recordId: id,
-                payload: {},
-                userId: cached?.user_id || "",
-            });
-        }
+        });
     },
 };

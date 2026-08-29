@@ -3,6 +3,7 @@ import { supabase } from "../../../supabase";
 import type { Party, PartyCreateDTO, PartyUpdateDTO, PartyType } from "../../../types/party";
 import type { Database } from "../../../types/database";
 import { offlineDb } from "../../../lib/offline/offlineDb";
+import { syncManager } from "../../../lib/offline/syncManager";
 
 type PartyRow = Database["public"]["Tables"]["parties"]["Row"];
 type PartyUpdate = Database["public"]["Tables"]["parties"]["Update"];
@@ -105,40 +106,50 @@ export const partyService = {
     },
 
     async createParty(partyData: PartyCreateDTO, userId: string): Promise<Party> {
-        const now = new Date().toISOString();
-        const partyId = crypto.randomUUID ? crypto.randomUUID() : `party_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+        return await syncManager.onUserMutation(async () => {
+            const now = new Date().toISOString();
+            const partyId = crypto.randomUUID ? crypto.randomUUID() : `party_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-        const newRow: PartyRow = {
-            id: partyId,
-            user_id: userId,
-            name: partyData.name.trim(),
-            type: partyData.type || "person",
-            phone: partyData.phone?.trim() || "",
-            email: partyData.email?.trim() || "",
-            notes: partyData.notes?.trim() || "",
-            created_at: now,
-            updated_at: now,
-        };
+            const newRow: PartyRow = {
+                id: partyId,
+                user_id: userId,
+                name: partyData.name.trim(),
+                type: partyData.type || "person",
+                phone: partyData.phone?.trim() || "",
+                email: partyData.email?.trim() || "",
+                notes: partyData.notes?.trim() || "",
+                created_at: now,
+                updated_at: now,
+            };
 
-        // 1. Write immediately to local IndexedDB
-        await offlineDb.put("parties", newRow);
+            // 1. Write immediately to local IndexedDB
+            await offlineDb.put("parties", newRow);
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { data, error } = await supabase
-                    .from("parties")
-                    .insert([newRow])
-                    .select()
-                    .single();
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { data, error } = await supabase
+                        .from("parties")
+                        .insert([newRow])
+                        .select()
+                        .single();
 
-                if (error) throw error;
-                if (data) {
-                    await offlineDb.put("parties", data);
-                    return rowToParty(data as PartyRow);
+                    if (error) throw error;
+                    if (data) {
+                        await offlineDb.put("parties", data);
+                        return rowToParty(data as PartyRow);
+                    }
+                } catch (err) {
+                    console.warn("Online party creation failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "parties",
+                        action: "insert",
+                        recordId: partyId,
+                        payload: newRow,
+                        userId,
+                    });
                 }
-            } catch (err) {
-                console.warn("Online party creation failed, queueing:", err);
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "parties",
                     action: "insert",
@@ -147,47 +158,49 @@ export const partyService = {
                     userId,
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "parties",
-                action: "insert",
-                recordId: partyId,
-                payload: newRow,
-                userId,
-            });
-        }
 
-        return rowToParty(newRow);
+            return rowToParty(newRow);
+        });
     },
 
     async updateParty(id: string, partyData: PartyUpdateDTO): Promise<void> {
-        const cached = await offlineDb.getById<PartyRow>("parties", id);
-        const updateData: PartyUpdate = {
-            updated_at: new Date().toISOString(),
-        };
+        return await syncManager.onUserMutation(async () => {
+            const cached = await offlineDb.getById<PartyRow>("parties", id);
+            const updateData: PartyUpdate = {
+                updated_at: new Date().toISOString(),
+            };
 
-        if (partyData.name !== undefined) updateData.name = partyData.name.trim();
-        if (partyData.type !== undefined) updateData.type = partyData.type;
-        if (partyData.phone !== undefined) updateData.phone = partyData.phone.trim();
-        if (partyData.email !== undefined) updateData.email = partyData.email.trim();
-        if (partyData.notes !== undefined) updateData.notes = partyData.notes.trim();
+            if (partyData.name !== undefined) updateData.name = partyData.name.trim();
+            if (partyData.type !== undefined) updateData.type = partyData.type;
+            if (partyData.phone !== undefined) updateData.phone = partyData.phone.trim();
+            if (partyData.email !== undefined) updateData.email = partyData.email.trim();
+            if (partyData.notes !== undefined) updateData.notes = partyData.notes.trim();
 
-        // 1. Update IndexedDB immediately
-        if (cached) {
-            await offlineDb.put("parties", { ...cached, ...updateData });
-        }
+            // 1. Update IndexedDB immediately
+            if (cached) {
+                await offlineDb.put("parties", { ...cached, ...updateData });
+            }
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { error } = await supabase
-                    .from("parties")
-                    .update(updateData)
-                    .eq("id", id);
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase
+                        .from("parties")
+                        .update(updateData)
+                        .eq("id", id);
 
-                if (error) throw error;
-            } catch (err) {
-                console.warn("Online party update failed, queueing:", err);
+                    if (error) throw error;
+                } catch (err) {
+                    console.warn("Online party update failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "parties",
+                        action: "update",
+                        recordId: id,
+                        payload: updateData,
+                        userId: cached?.user_id || "",
+                    });
+                }
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "parties",
                     action: "update",
@@ -196,34 +209,36 @@ export const partyService = {
                     userId: cached?.user_id || "",
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "parties",
-                action: "update",
-                recordId: id,
-                payload: updateData,
-                userId: cached?.user_id || "",
-            });
-        }
+        });
     },
 
     async deleteParty(id: string): Promise<void> {
-        const cached = await offlineDb.getById<PartyRow>("parties", id);
+        return await syncManager.onUserMutation(async () => {
+            const cached = await offlineDb.getById<PartyRow>("parties", id);
 
-        // 1. Delete from IndexedDB immediately
-        await offlineDb.deleteItem("parties", id);
+            // 1. Delete from IndexedDB immediately
+            await offlineDb.deleteItem("parties", id);
 
-        // 2. Sync to Supabase or queue
-        if (typeof navigator !== "undefined" && navigator.onLine) {
-            try {
-                const { error } = await supabase
-                    .from("parties")
-                    .delete()
-                    .eq("id", id);
+            // 2. Sync to Supabase or queue
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase
+                        .from("parties")
+                        .delete()
+                        .eq("id", id);
 
-                if (error) throw error;
-            } catch (err) {
-                console.warn("Online party delete failed, queueing:", err);
+                    if (error) throw error;
+                } catch (err) {
+                    console.warn("Online party delete failed, queueing:", err);
+                    await offlineDb.addToSyncQueue({
+                        table: "parties",
+                        action: "delete",
+                        recordId: id,
+                        payload: {},
+                        userId: cached?.user_id || "",
+                    });
+                }
+            } else {
                 await offlineDb.addToSyncQueue({
                     table: "parties",
                     action: "delete",
@@ -232,14 +247,6 @@ export const partyService = {
                     userId: cached?.user_id || "",
                 });
             }
-        } else {
-            await offlineDb.addToSyncQueue({
-                table: "parties",
-                action: "delete",
-                recordId: id,
-                payload: {},
-                userId: cached?.user_id || "",
-            });
-        }
+        });
     },
 };

@@ -14,7 +14,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const { toggleTheme } = useTheme();
-    const { isOnline, isSyncing, pendingCount, lastSyncedAt, syncNow } = useNetwork();
+    const { isOnline, isSyncing, pendingCount, lastSyncedAt } = useNetwork();
 
     const [open, setOpen] = useState<"notif" | "msg" | "profile" | null>(null);
     const navRef = useRef<HTMLDivElement>(null);
@@ -58,43 +58,28 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
                     {/* Offline & Sync Status Indicator */}
                     {!isOnline ? (
                         <div
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30"
-                            title="You are currently offline. Changes are saved locally and will automatically sync when connection returns."
+                            className="flex items-center text-amber-500 dark:text-amber-400 p-1"
+                            title={pendingCount > 0 ? `Offline • ${pendingCount} changes saved locally` : "Offline (Local mode)"}
+                            aria-label="Offline status"
                         >
-                            <i className="bi bi-wifi-off text-amber-600 dark:text-amber-400" />
-                            <span className="hidden sm:inline">Offline</span>
-                            {pendingCount > 0 && (
-                                <span className="bg-amber-600 text-white text-[10px] font-semibold px-1.5 py-0.2 rounded-full">
-                                    {pendingCount}
-                                </span>
-                            )}
+                            <i className="bi bi-wifi-off text-lg" />
                         </div>
                     ) : isSyncing ? (
                         <div
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
-                            title="Syncing changes with cloud..."
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20 animate-pulse"
+                            title="Connection detected. Automatically syncing changes with cloud..."
                         >
                             <i className="bi bi-arrow-repeat animate-spin text-primary" />
                             <span className="hidden sm:inline">Syncing...</span>
                         </div>
-                    ) : pendingCount > 0 ? (
-                        <button
-                            onClick={syncNow}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/20 cursor-pointer transition-colors"
-                            title="Click to synchronize pending changes with cloud"
-                        >
-                            <i className="bi bi-cloud-arrow-up" />
-                            <span>Sync ({pendingCount})</span>
-                        </button>
                     ) : (
-                        <button
-                            onClick={syncNow}
-                            className="text-emerald-600 dark:text-emerald-400 hover:opacity-80 transition-opacity cursor-pointer p-1"
-                            title={lastSyncedAt ? `Synced with cloud (last: ${lastSyncedAt.toLocaleTimeString()})` : "Synced with cloud"}
+                        <div
+                            className="text-emerald-600 dark:text-emerald-400 p-1 flex items-center"
+                            title={lastSyncedAt ? `Connected & synced (last: ${lastSyncedAt.toLocaleTimeString()})` : "Connected & synced"}
                             aria-label="Cloud sync status"
                         >
                             <i className="bi bi-cloud-check text-lg" />
-                        </button>
+                        </div>
                     )}
 
                     {/* Fullscreen toggle */}
