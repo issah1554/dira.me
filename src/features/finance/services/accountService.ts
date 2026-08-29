@@ -1,10 +1,22 @@
 import { supabase } from "../../../supabase";
-import type { Account, AccountCreateDTO, AccountUpdateDTO } from "../../../types/account";
+import type { Account, AccountCreateDTO, AccountUpdateDTO, CurrencyCode } from "../../../types/account";
 import type { Database } from "../../../types/database";
 
 type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type AccountInsert = Database["public"]["Tables"]["accounts"]["Insert"];
 type AccountUpdate = Database["public"]["Tables"]["accounts"]["Update"];
+
+// Helper to format currency
+export const formatCurrencyAmount = (amount: number, currency: CurrencyCode = "TZS"): string => {
+    const val = amount || 0;
+    if (currency === "USD") {
+        return `$ ${val.toLocaleString(undefined, {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })}`;
+    }
+    return `${val.toLocaleString()} TZS`;
+};
 
 // Helper to get default icon based on account type
 const getDefaultIcon = (type: string): string => {
@@ -25,6 +37,8 @@ const rowToAccount = (row: AccountRow, calculatedBalance?: number, calculatedLas
     const currentBalance = calculatedBalance !== undefined
         ? calculatedBalance
         : (typeof row.current_balance === "number" ? row.current_balance : parseFloat(String(row.current_balance || "0")) || 0);
+
+    const currency: CurrencyCode = (row.currency as CurrencyCode) || "TZS";
 
     let createdAt: Date | undefined;
     if (row.created_at) {
@@ -49,7 +63,8 @@ const rowToAccount = (row: AccountRow, calculatedBalance?: number, calculatedLas
         id: String(row.id),
         name: row.name,
         type: row.type,
-        balance: `${currentBalance.toLocaleString()} TZS`,
+        currency,
+        balance: formatCurrencyAmount(currentBalance, currency),
         accountNumber: row.account_number || "",
         status: (row.status as "active" | "inactive" | "pending") || "active",
         openingBalance,
@@ -69,12 +84,14 @@ export const accountService = {
     async createAccount(accountData: AccountCreateDTO, userId: string): Promise<Account> {
         try {
             const openingBal = parseFloat(accountData.openingBalance?.toString() || "0") || 0;
+            const currency = accountData.currency || "TZS";
             const now = new Date().toISOString();
 
             const newAccountRow: AccountInsert = {
                 user_id: userId,
                 name: accountData.name.trim(),
                 type: accountData.type,
+                currency,
                 account_number: accountData.accountNumber || "",
                 status: "active",
                 opening_balance: openingBal,
@@ -203,6 +220,7 @@ export const accountService = {
                 updates.type = accountData.type;
                 updates.icon = getDefaultIcon(accountData.type);
             }
+            if (accountData.currency !== undefined) updates.currency = accountData.currency;
             if (accountData.status !== undefined) updates.status = accountData.status;
             if (accountData.description !== undefined) updates.description = accountData.description;
 
@@ -238,21 +256,32 @@ export const accountService = {
         totalBalance: number;
         activeAccounts: number;
         accountTypes: number;
+        balancesByCurrency: Record<CurrencyCode, number>;
     }> {
         try {
             const accounts = await this.getAccounts(userId);
             const activeAccounts = accounts.filter(acc => acc.status === "active");
 
-            const totalBalance = activeAccounts.reduce((sum, acc) => {
-                return sum + (acc.currentBalance || 0);
-            }, 0);
+            const balancesByCurrency: Record<CurrencyCode, number> = {
+                TZS: 0,
+                USD: 0,
+            };
+
+            let totalBalance = 0;
+            activeAccounts.forEach(acc => {
+                const bal = acc.currentBalance || 0;
+                totalBalance += bal;
+                const curr = acc.currency || "TZS";
+                balancesByCurrency[curr] = (balancesByCurrency[curr] || 0) + bal;
+            });
 
             const uniqueTypes = new Set(activeAccounts.map(acc => acc.type));
 
             return {
                 totalBalance,
                 activeAccounts: activeAccounts.length,
-                accountTypes: uniqueTypes.size
+                accountTypes: uniqueTypes.size,
+                balancesByCurrency,
             };
         } catch (error) {
             console.error("Error getting account summary:", error);

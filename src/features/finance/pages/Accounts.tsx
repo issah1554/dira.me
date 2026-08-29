@@ -1,10 +1,10 @@
 import { useState } from "react";
-// import { Toast } from "../../../components/ui/Toast";
 import { Button } from "../../../components/ui/Buttons";
 import { Modal } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
 import { useAccounts } from "../hooks/useAccounts";
 import Loader from "../../../components/ui/Loaders";
+import type { CurrencyCode } from "../../../types/account";
 
 const accountTypes = [
     { value: "cash", label: "Cash" },
@@ -30,6 +30,7 @@ export default function Accounts() {
     const [formData, setFormData] = useState({
         name: "",
         type: "",
+        currency: "TZS" as CurrencyCode,
         accountNumber: "",
         openingBalance: "",
         description: ""
@@ -47,7 +48,14 @@ export default function Accounts() {
 
     const handleClose = () => {
         setOpen(false);
-        setFormData({ name: "", type: "", accountNumber: "", openingBalance: "", description: "" });
+        setFormData({
+            name: "",
+            type: "",
+            currency: "TZS",
+            accountNumber: "",
+            openingBalance: "",
+            description: ""
+        });
     };
 
     const handleSubmit = async (e: { preventDefault: () => void; }) => {
@@ -56,6 +64,7 @@ export default function Accounts() {
             await createAccount({
                 name: formData.name,
                 type: formData.type,
+                currency: formData.currency,
                 accountNumber: formData.accountNumber,
                 openingBalance: parseFloat(formData.openingBalance) || 0,
                 description: formData.description
@@ -125,8 +134,7 @@ export default function Accounts() {
 
     return (
         <div className="flex-1 text-main-700">
-            {/* Toast Notification */}
-
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h3 className="text font-bold">Financial Accounts</h3>
@@ -143,12 +151,17 @@ export default function Accounts() {
                 <div className="bg-primary-100 border border-primary-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm text-primary-600">Total Balance</p>
+                            <p className="text-sm text-primary-600">Total Balance (TZS)</p>
                             <h4 className="text-2xl font-bold text-primary-700">
-                                {formatCurrency(summary.totalBalance)}
+                                {formatCurrency(summary.balancesByCurrency?.TZS || 0, "TZS")}
                             </h4>
+                            {summary.balancesByCurrency?.USD ? (
+                                <p className="text-xs text-primary-600 mt-1 font-semibold">
+                                    + {formatCurrency(summary.balancesByCurrency.USD, "USD")}
+                                </p>
+                            ) : null}
                         </div>
-                        <i className="bi bi-currency-rupee text-2xl text-primary-400"></i>
+                        <i className="bi bi-wallet2 text-2xl text-primary-400"></i>
                     </div>
                     <p className="text-xs text-primary-500 mt-2">Across all active accounts</p>
                 </div>
@@ -170,7 +183,7 @@ export default function Accounts() {
                             <p className="text-sm text-accent-600">Account Types</p>
                             <h4 className="text-2xl font-bold text-accent-700">{summary.accountTypes}</h4>
                         </div>
-                        <i className="bi bi-wallet2 text-2xl text-accent-400"></i>
+                        <i className="bi bi-collection text-2xl text-accent-400"></i>
                     </div>
                     <p className="text-xs text-accent-500 mt-2">Various account types</p>
                 </div>
@@ -190,7 +203,12 @@ export default function Accounts() {
                                     <p className="text-xs text-main-500">{account.accountNumber || "No account number"}</p>
                                 </div>
                             </div>
-                            {getStatusBadge(account.status)}
+                            <div className="flex items-center gap-1.5">
+                                <span className="px-2 py-0.5 rounded text-xs font-semibold bg-main-100 text-main-700 border border-main-300">
+                                    {account.currency || "TZS"}
+                                </span>
+                                {getStatusBadge(account.status)}
+                            </div>
                         </div>
 
                         <div className="mb-4">
@@ -211,12 +229,6 @@ export default function Accounts() {
                         </div>
 
                         <div className="flex gap-2 mt-4 pt-4 border-t border-main-300">
-                            <Button color="neutral" size="xs" variant="outline" className="flex-1">
-                                <i className="bi bi-eye mr-1" /> View
-                            </Button>
-                            <Button color="neutral" size="xs" variant="outline" className="flex-1">
-                                <i className="bi bi-pencil mr-1" /> Edit
-                            </Button>
                             <Button
                                 color="neutral"
                                 size="xs"
@@ -268,26 +280,43 @@ export default function Accounts() {
                             value={formData.name}
                             onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
                             required
-                            placeholder="e.g., HDFC Savings, Cash Drawer, etc."
+                            placeholder="e.g., CRDB Bank, Cash Wallet, USD Account, etc."
                         />
 
-                        <div>
-                            <label className="block text-sm font-medium text-main-700 mb-2">
-                                Account Type
-                            </label>
-                            <select
-                                className="w-full px-3 py-2 border border-main-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                value={formData.type}
-                                onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
-                                required
-                            >
-                                <option value="">Select account type</option>
-                                {accountTypes.map(type => (
-                                    <option key={type.value} value={type.value}>
-                                        {type.label}
-                                    </option>
-                                ))}
-                            </select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-main-700 mb-2">
+                                    Account Type <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+                                    value={formData.type}
+                                    onChange={e => setFormData(p => ({ ...p, type: e.target.value }))}
+                                    required
+                                >
+                                    <option value="">Select account type</option>
+                                    {accountTypes.map(type => (
+                                        <option key={type.value} value={type.value}>
+                                            {type.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-main-700 mb-2">
+                                    Currency <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
+                                    value={formData.currency}
+                                    onChange={e => setFormData(p => ({ ...p, currency: e.target.value as CurrencyCode }))}
+                                    required
+                                >
+                                    <option value="TZS">TZS — Tanzanian Shilling</option>
+                                    <option value="USD">USD — US Dollar ($)</option>
+                                </select>
+                            </div>
                         </div>
 
                         <TextInput
@@ -302,7 +331,7 @@ export default function Accounts() {
                         />
 
                         <TextInput
-                            label="Opening Balance"
+                            label={`Opening Balance (${formData.currency})`}
                             labelBgColor="bg-main-100"
                             color="primary"
                             size="md"

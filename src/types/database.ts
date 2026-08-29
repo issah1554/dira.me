@@ -8,6 +8,8 @@ export type Json =
     | { [key: string]: Json | undefined }
     | Json[];
 
+export type CurrencyCode = "TZS" | "USD";
+
 export interface Database {
     public: {
         Tables: {
@@ -17,6 +19,7 @@ export interface Database {
                     user_id: string;
                     name: string;
                     type: string;
+                    currency: CurrencyCode;
                     opening_balance: number;
                     current_balance: number;
                     account_number: string;
@@ -32,6 +35,7 @@ export interface Database {
                     user_id: string;
                     name: string;
                     type: string;
+                    currency?: CurrencyCode;
                     opening_balance?: number;
                     current_balance?: number;
                     account_number?: string;
@@ -47,6 +51,7 @@ export interface Database {
                     user_id?: string;
                     name?: string;
                     type?: string;
+                    currency?: CurrencyCode;
                     opening_balance?: number;
                     current_balance?: number;
                     account_number?: string;
@@ -66,6 +71,7 @@ export interface Database {
                     amount: number;
                     dc: "dr" | "cr";
                     account: string;
+                    currency: CurrencyCode;
                     notes: string;
                     category: string;
                     status: "completed" | "pending" | "failed";
@@ -79,6 +85,7 @@ export interface Database {
                     amount: number;
                     dc: "dr" | "cr";
                     account: string;
+                    currency?: CurrencyCode;
                     notes?: string;
                     category?: string;
                     status?: "completed" | "pending" | "failed";
@@ -92,6 +99,7 @@ export interface Database {
                     amount?: number;
                     dc?: "dr" | "cr";
                     account?: string;
+                    currency?: CurrencyCode;
                     notes?: string;
                     category?: string;
                     status?: "completed" | "pending" | "failed";
@@ -110,6 +118,7 @@ export interface DbTransaction {
     dc: "dr" | "cr";
     notes: string;
     account: string;
+    currency?: CurrencyCode;
     category: string;
     status: "completed" | "pending" | "failed";
     createdAt: string;
@@ -123,6 +132,7 @@ export interface TransactionFormData {
     dc: "dr" | "cr";
     notes: string;
     account: string;
+    currency?: CurrencyCode;
     category: string;
     status?: "completed" | "pending" | "failed";
 }
@@ -130,6 +140,7 @@ export interface TransactionFormData {
 export type TransactionFilter = {
     status?: "completed" | "pending" | "failed";
     account?: string;
+    currency?: CurrencyCode;
     dateFrom?: string;
     dateTo?: string;
     category?: string;

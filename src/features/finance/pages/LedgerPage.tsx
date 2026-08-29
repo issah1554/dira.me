@@ -94,11 +94,15 @@ export default function LedgerPage() {
             return;
         }
 
+        const selectedAccount = accounts.find(a => a.name === formData.account);
+        const currency = selectedAccount?.currency || "TZS";
+
         const payload = {
             date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
             amount: amt,
             dc: formData.dc,
             account: formData.account,
+            currency,
             category: formData.category || "General",
             notes: formData.notes,
             status: "completed" as const,
@@ -205,13 +209,19 @@ export default function LedgerPage() {
             header: "Amount",
             sortable: true,
             priority: 10,
-            render: row => (
-                <span
-                    className={`font-semibold ${row.dc === "cr" ? "text-green-600" : "text-red-600"}`}
-                >
-                    {row.dc === "cr" ? "+" : "-"}{row.amount.toLocaleString()} TZS
-                </span>
-            ),
+            render: row => {
+                const isUSD = row.currency === "USD";
+                const formattedAmount = isUSD
+                    ? `$ ${row.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `${row.amount.toLocaleString()} TZS`;
+                return (
+                    <span
+                        className={`font-semibold ${row.dc === "cr" ? "text-green-600" : "text-red-600"}`}
+                    >
+                        {row.dc === "cr" ? "+" : "-"} {formattedAmount}
+                    </span>
+                );
+            },
         },
 
         {
@@ -453,7 +463,27 @@ export default function LedgerPage() {
                             size="md"
                         />
 
-                        {/* Account Selection - Only existing accounts permitted */}
+                        <TextInput
+                            label="Category"
+                            labelBgColor="bg-main-200"
+                            value={formData.category}
+                            onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
+                            placeholder="e.g. Sales, Food, Transport, Supplies"
+                            color="primary"
+                            size="md"
+                        />
+
+                        <TextInput
+                            label="Notes / Description"
+                            labelBgColor="bg-main-200"
+                            value={formData.notes}
+                            onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
+                            placeholder="Add transaction details or memo"
+                            color="primary"
+                            size="md"
+                        />
+
+                        {/* Account Selection - placed at the bottom so notes/category relate to the transaction */}
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
                                 Associated Account <span className="text-red-500">*</span>
@@ -490,24 +520,6 @@ export default function LedgerPage() {
                                 </div>
                             )}
                         </div>
-
-                        <TextInput
-                            label="Category"
-                            labelBgColor="bg-main-200"
-                            value={formData.category}
-                            onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                            color="primary"
-                            size="md"
-                        />
-
-                        <TextInput
-                            label="Notes"
-                            labelBgColor="bg-main-200"
-                            value={formData.notes}
-                            onChange={e => setFormData(p => ({ ...p, notes: e.target.value }))}
-                            color="primary"
-                            size="md"
-                        />
 
                         <div className="flex justify-end gap-3 pt-4 border-t border-main-300">
                             <Button variant="outline" size="sm" onClick={closeModal} color="primary" type="button">

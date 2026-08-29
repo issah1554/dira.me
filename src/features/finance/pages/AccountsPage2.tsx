@@ -79,7 +79,7 @@ export const AccountsGridPage: React.FC = () => {
                                         accountType={acc.type}
                                         status={acc.status}
                                         balance={acc.currentBalance}
-                                        currency="TZS"
+                                        currency={acc.currency || "TZS"}
                                         className="h-full"
                                         onDelete={() => handleDelete(acc.id, acc.name)}
                                     />

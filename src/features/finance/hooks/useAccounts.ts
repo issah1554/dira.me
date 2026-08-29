@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { accountService } from '../services/accountService';
-import type { Account, AccountCreateDTO, AccountUpdateDTO, AccountSummary } from '../../../types/account';
+import { accountService, formatCurrencyAmount } from '../services/accountService';
+import type { Account, AccountCreateDTO, AccountUpdateDTO, AccountSummary, CurrencyCode } from '../../../types/account';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export const useAccounts = () => {
@@ -10,7 +10,8 @@ export const useAccounts = () => {
     const [summary, setSummary] = useState<AccountSummary>({
         totalBalance: 0,
         activeAccounts: 0,
-        accountTypes: 0
+        accountTypes: 0,
+        balancesByCurrency: { TZS: 0, USD: 0 },
     });
 
     const { user } = useAuth(); // Get current user from auth context
@@ -128,8 +129,8 @@ export const useAccounts = () => {
     };
 
     // Format currency
-    const formatCurrency = (amount: number): string => {
-        return `${(amount || 0).toLocaleString()} TZS`;
+    const formatCurrency = (amount: number, currency: CurrencyCode = "TZS"): string => {
+        return formatCurrencyAmount(amount, currency);
     };
 
     // Initialize on mount

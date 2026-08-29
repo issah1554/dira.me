@@ -1,5 +1,6 @@
 // src/features/finance/services/TransactionService.ts
 import { supabase } from "../../../supabase";
+import type { CurrencyCode } from "../../../types/account";
 import type { Database } from "../../../types/database";
 
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
@@ -15,6 +16,7 @@ export type TransactionDTO = {
     amount: number;
     dc: "dr" | "cr";
     account: string;
+    currency?: CurrencyCode;
     notes: string;
     category: string;
     status: "completed" | "pending" | "failed";
@@ -41,6 +43,7 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         amount: typeof row.amount === "number" ? row.amount : parseFloat(String(row.amount)) || 0,
         dc: (row.dc as "dr" | "cr") || "dr",
         account: row.account || "",
+        currency: (row.currency as CurrencyCode) || "TZS",
         notes: row.notes || "",
         category: row.category || "",
         status: (row.status as "completed" | "pending" | "failed") || "completed",
@@ -72,6 +75,7 @@ export const TransactionService = {
             amount: payload.amount,
             dc: payload.dc,
             account: payload.account,
+            currency: payload.currency || "TZS",
             notes: payload.notes || "",
             category: payload.category || "",
             status: payload.status || "completed",
@@ -102,6 +106,7 @@ export const TransactionService = {
         if (payload.amount !== undefined) updateData.amount = payload.amount;
         if (payload.dc !== undefined) updateData.dc = payload.dc;
         if (payload.account !== undefined) updateData.account = payload.account;
+        if (payload.currency !== undefined) updateData.currency = payload.currency;
         if (payload.notes !== undefined) updateData.notes = payload.notes;
         if (payload.category !== undefined) updateData.category = payload.category;
         if (payload.status !== undefined) updateData.status = payload.status;
