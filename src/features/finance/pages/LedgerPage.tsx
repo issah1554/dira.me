@@ -6,12 +6,22 @@ import { Toast } from "../../../components/ui/Toast";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
 import { DatePicker } from "../../../components/ui/DatePicker";
+import { TimePicker } from "../../../components/ui/TimePicker";
 import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { useParties } from "../hooks/useParties";
 import { partyTypeIcons, partyTypeColors } from "../services/partyService";
 import type { Transaction } from "../services/TransactionService";
 import Loader from "../../../components/ui/Loaders";
+
+/* =======================
+   Helpers
+======================= */
+
+const getCurrentTimeStr = () => {
+    const d = new Date();
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
 
 /* =======================
    Component
@@ -40,6 +50,7 @@ export default function LedgerPage() {
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
+        time: getCurrentTimeStr(),
         amount: "",
         dc: "cr" as "dr" | "cr", // Default to Cash In
         account: "",
@@ -53,6 +64,7 @@ export default function LedgerPage() {
         setEditingId(null);
         setFormData({
             date: new Date().toISOString().split("T")[0],
+            time: getCurrentTimeStr(),
             amount: "",
             dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
@@ -66,6 +78,7 @@ export default function LedgerPage() {
         setEditingId(null);
         setFormData({
             date: new Date().toISOString().split("T")[0],
+            time: getCurrentTimeStr(),
             amount: "",
             dc: "cr",
             account: accounts.length > 0 ? accounts[0].name : "",
@@ -78,8 +91,24 @@ export default function LedgerPage() {
 
     const handleOpenEdit = (tx: Transaction) => {
         setEditingId(tx.id);
+        let dateVal = new Date().toISOString().split("T")[0];
+        let timeVal = getCurrentTimeStr();
+
+        if (tx.date) {
+            try {
+                const d = new Date(tx.date);
+                if (!isNaN(d.getTime())) {
+                    dateVal = d.toISOString().split("T")[0];
+                    timeVal = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                }
+            } catch {
+                dateVal = tx.date.split("T")[0];
+            }
+        }
+
         setFormData({
-            date: tx.date ? tx.date.split("T")[0] : new Date().toISOString().split("T")[0],
+            date: dateVal,
+            time: timeVal,
             amount: String(tx.amount),
             dc: tx.dc,
             account: tx.account,
@@ -105,8 +134,19 @@ export default function LedgerPage() {
         const selectedAccount = accounts.find(a => a.name === formData.account);
         const currency = selectedAccount?.currency || "TZS";
 
+        let fullIsoDate = new Date().toISOString();
+        if (formData.date) {
+            const timeVal = formData.time || "00:00";
+            const combined = new Date(`${formData.date}T${timeVal}:00`);
+            if (!isNaN(combined.getTime())) {
+                fullIsoDate = combined.toISOString();
+            } else {
+                fullIsoDate = new Date(formData.date).toISOString();
+            }
+        }
+
         const payload = {
-            date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
+            date: fullIsoDate,
             amount: amt,
             dc: formData.dc,
             account: formData.account,
@@ -161,7 +201,7 @@ export default function LedgerPage() {
     const columns: Column<Transaction>[] = [
         {
             key: "date",
-            header: "Date",
+            header: "Date & Time",
             sortable: true,
             priority: 9,
             render: row => {
@@ -189,7 +229,12 @@ export default function LedgerPage() {
                 return (
                     <div className="flex flex-col">
                         <span className="font-medium">{dateStr}</span>
-                        {timeStr && <span className="text-xs text-main-500">{timeStr}</span>}
+                        {timeStr && (
+                            <span className="text-xs text-main-500 flex items-center gap-1">
+                                <i className="bi bi-clock text-[10px]" />
+                                {timeStr}
+                            </span>
+                        )}
                     </div>
                 );
             },
@@ -436,16 +481,29 @@ export default function LedgerPage() {
 
                 <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
                     <ModalBody>
-                        <DatePicker
-                            label="Date"
-                            labelBgColor="bg-main-100"
-                            value={formData.date}
-                            onChange={date => setFormData(p => ({ ...p, date }))}
-                            required
-                            color="primary"
-                            size="md"
-                            showTodayButton
-                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <DatePicker
+                                label="Date"
+                                labelBgColor="bg-main-100"
+                                value={formData.date}
+                                onChange={date => setFormData(p => ({ ...p, date }))}
+                                required
+                                color="primary"
+                                size="md"
+                                showTodayButton
+                            />
+
+                            <TimePicker
+                                label="Time"
+                                labelBgColor="bg-main-100"
+                                value={formData.time}
+                                onChange={time => setFormData(p => ({ ...p, time }))}
+                                required
+                                color="primary"
+                                size="md"
+                                showNowButton
+                            />
+                        </div>
 
                         {/* Cash In vs Cash Out Selection */}
                         <div className="flex gap-3">
