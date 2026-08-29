@@ -28,7 +28,7 @@ const transactionTypes: { value: TransactionType; label: string }[] = [
     { value: "income", label: "Income" },
     { value: "expense", label: "Expense" },
     { value: "transfer", label: "Transfer" },
-    { value: "borrow", label: "Borrow / Loan" },
+    { value: "borrow", label: "Borrow" },
     { value: "repayment", label: "Repayment" },
 ];
 
@@ -50,10 +50,13 @@ export default function LedgerPage() {
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
 
-    const [filterStatus, setFilterStatus] = useState("");
+    // Minimal Filter State
+    const [searchQuery, setSearchQuery] = useState("");
+    const [showFilters, setShowFilters] = useState(false);
     const [filterType, setFilterType] = useState<string>("");
     const [filterAccount, setFilterAccount] = useState("");
     const [filterParty, setFilterParty] = useState("");
+    const [filterStatus, setFilterStatus] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
 
@@ -189,6 +192,27 @@ export default function LedgerPage() {
         }
     };
 
+    // Active filters count
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (filterType) count++;
+        if (filterAccount) count++;
+        if (filterParty) count++;
+        if (filterStatus) count++;
+        if (filterDateFrom || filterDateTo) count++;
+        return count;
+    }, [filterType, filterAccount, filterParty, filterStatus, filterDateFrom, filterDateTo]);
+
+    const clearAllFilters = () => {
+        setSearchQuery("");
+        setFilterType("");
+        setFilterAccount("");
+        setFilterParty("");
+        setFilterStatus("");
+        setFilterDateFrom("");
+        setFilterDateTo("");
+    };
+
     // Filter transactions
     const filteredTransactions = useMemo(() => {
         return transactions.filter(tx => {
@@ -207,9 +231,21 @@ export default function LedgerPage() {
                 const txDate = tx.date.split("T")[0];
                 if (txDate > filterDateTo) return false;
             }
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const party = parties.find(p => p.id === tx.party_id);
+                const matchCategory = tx.category?.toLowerCase().includes(q);
+                const matchNotes = tx.notes?.toLowerCase().includes(q);
+                const matchAccount = tx.account?.toLowerCase().includes(q);
+                const matchParty = party?.name.toLowerCase().includes(q);
+                const matchAmount = String(tx.amount).includes(q);
+                if (!matchCategory && !matchNotes && !matchAccount && !matchParty && !matchAmount) {
+                    return false;
+                }
+            }
             return true;
         });
-    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo]);
+    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo, searchQuery, parties]);
 
     /* =======================
        Columns
@@ -400,77 +436,66 @@ export default function LedgerPage() {
 
     return (
         <div className="space-y-4 text-main-700">
-            {/* Toolbar */}
+            {/* Minimal Filter Toolbar */}
             <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                    <select
-                        value={filterStatus}
-                        onChange={e => setFilterStatus(e.target.value)}
-                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
-                    >
-                        <option value="">All Status</option>
-                        <option value="completed">Completed</option>
-                        <option value="pending">Pending</option>
-                        <option value="failed">Failed</option>
-                    </select>
-
-                    <select
-                        value={filterType}
-                        onChange={e => setFilterType(e.target.value)}
-                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
-                    >
-                        <option value="">All Transaction Types</option>
-                        {transactionTypes.map(t => (
-                            <option key={t.value} value={t.value}>{t.label}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={filterAccount}
-                        onChange={e => setFilterAccount(e.target.value)}
-                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
-                    >
-                        <option value="">All Accounts</option>
-                        {availableAccounts.map(acc => (
-                            <option key={acc} value={acc}>{acc}</option>
-                        ))}
-                    </select>
-
-                    <select
-                        value={filterParty}
-                        onChange={e => setFilterParty(e.target.value)}
-                        className="border border-main-300 rounded px-2 py-1.5 text-sm bg-main-100"
-                    >
-                        <option value="">All Parties</option>
-                        {parties.map(p => (
-                            <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
-                        ))}
-                    </select>
-
-                    <div className="flex items-center gap-1.5 border border-main-300 rounded px-2 py-1 bg-main-100">
-                        <i className="bi bi-calendar-range text-main-500 text-xs" />
+                <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[260px]">
+                    {/* Live Search Input */}
+                    <div className="relative flex-1 max-w-xs min-w-[200px]">
+                        <i className="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-main-400 text-xs pointer-events-none" />
                         <input
-                            type="date"
-                            value={filterDateFrom}
-                            onChange={e => setFilterDateFrom(e.target.value)}
-                            aria-label="From date"
-                            className="bg-transparent text-xs text-main focus:outline-none cursor-pointer"
+                            type="text"
+                            value={searchQuery}
+                            onChange={e => setSearchQuery(e.target.value)}
+                            placeholder="Search transactions..."
+                            className="w-full pl-8 pr-7 py-1.5 text-sm bg-main-100 border border-main-300 rounded-lg text-main placeholder:text-main-400 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
                         />
-                        <span className="text-xs text-main-400">—</span>
-                        <input
-                            type="date"
-                            value={filterDateTo}
-                            onChange={e => setFilterDateTo(e.target.value)}
-                            aria-label="To date"
-                            className="bg-transparent text-xs text-main focus:outline-none cursor-pointer"
-                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery("")}
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-main-400 hover:text-main-700 cursor-pointer"
+                                aria-label="Clear search"
+                            >
+                                <i className="bi bi-x text-sm" />
+                            </button>
+                        )}
                     </div>
+
+                    {/* Filter Toggle Button */}
+                    <button
+                        onClick={() => setShowFilters(v => !v)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+                            showFilters || activeFilterCount > 0
+                                ? "bg-primary/10 border-primary text-primary"
+                                : "border-main-300 bg-main-100 text-main-600 hover:bg-main-200"
+                        }`}
+                    >
+                        <i className="bi bi-sliders text-xs" />
+                        <span>Filters</span>
+                        {activeFilterCount > 0 && (
+                            <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold bg-primary text-white rounded-full">
+                                {activeFilterCount}
+                            </span>
+                        )}
+                    </button>
+
+                    {/* Clear All Shortcut */}
+                    {(activeFilterCount > 0 || searchQuery) && (
+                        <button
+                            onClick={clearAllFilters}
+                            className="text-xs text-main-500 hover:text-danger flex items-center gap-1 transition-colors px-1 cursor-pointer"
+                        >
+                            <i className="bi bi-x-circle" />
+                            <span className="hidden sm:inline">Clear all</span>
+                        </button>
+                    )}
                 </div>
 
-                <div className="flex gap-2">
+                {/* Right Action Buttons */}
+                <div className="flex items-center gap-2">
                     <Button
                         color="error"
                         size="sm"
+                        variant="outline"
                         onClick={() =>
                             Toast.fire({ icon: "success", title: "Exported to PDF" })
                         }
@@ -487,6 +512,144 @@ export default function LedgerPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Expandable Advanced Filter Drawer (Cleanly Hidden by Default) */}
+            {showFilters && (
+                <div className="p-4 bg-main-200/50 rounded-xl border border-main-300 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs animate-fade-in shadow-inner">
+                    <div>
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Type</label>
+                        <select
+                            value={filterType}
+                            onChange={e => setFilterType(e.target.value)}
+                            className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                            <option value="">All Types</option>
+                            {transactionTypes.map(t => (
+                                <option key={t.value} value={t.value}>{t.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Account</label>
+                        <select
+                            value={filterAccount}
+                            onChange={e => setFilterAccount(e.target.value)}
+                            className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                            <option value="">All Accounts</option>
+                            {availableAccounts.map(acc => (
+                                <option key={acc} value={acc}>{acc}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Party / Counterparty</label>
+                        <select
+                            value={filterParty}
+                            onChange={e => setFilterParty(e.target.value)}
+                            className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                            <option value="">All Parties</option>
+                            {parties.map(p => (
+                                <option key={p.id} value={p.id}>{p.name} ({p.type})</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Status</label>
+                        <select
+                            value={filterStatus}
+                            onChange={e => setFilterStatus(e.target.value)}
+                            className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="completed">Completed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Date Range</label>
+                        <div className="flex items-center gap-1.5">
+                            <input
+                                type="date"
+                                value={filterDateFrom}
+                                onChange={e => setFilterDateFrom(e.target.value)}
+                                className="w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                            />
+                            <span className="text-main-400">—</span>
+                            <input
+                                type="date"
+                                value={filterDateTo}
+                                onChange={e => setFilterDateTo(e.target.value)}
+                                className="w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Active Filter Chips Bar (Quick Dismissal) */}
+            {activeFilterCount > 0 && !showFilters && (
+                <div className="flex flex-wrap items-center gap-1.5 text-xs pt-1">
+                    <span className="text-[11px] text-main-400 font-medium mr-1">Active:</span>
+
+                    {filterType && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
+                            Type: {transactionTypes.find(t => t.value === filterType)?.label}
+                            <button onClick={() => setFilterType("")} className="hover:text-danger ml-0.5">
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+
+                    {filterAccount && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
+                            Account: {filterAccount}
+                            <button onClick={() => setFilterAccount("")} className="hover:text-danger ml-0.5">
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+
+                    {filterParty && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
+                            Party: {parties.find(p => p.id === filterParty)?.name}
+                            <button onClick={() => setFilterParty("")} className="hover:text-danger ml-0.5">
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+
+                    {filterStatus && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs capitalize">
+                            Status: {filterStatus}
+                            <button onClick={() => setFilterStatus("")} className="hover:text-danger ml-0.5">
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+
+                    {(filterDateFrom || filterDateTo) && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
+                            Date: {filterDateFrom || "Start"} to {filterDateTo || "End"}
+                            <button
+                                onClick={() => {
+                                    setFilterDateFrom("");
+                                    setFilterDateTo("");
+                                }}
+                                className="hover:text-danger ml-0.5"
+                            >
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+                </div>
+            )}
 
             {/* Add / Edit Ledger Entry Modal */}
             <Modal open={open} onClose={closeModal} size="md" position="center" blur>

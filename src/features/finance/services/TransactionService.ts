@@ -44,12 +44,12 @@ export const transactionTypeConfig: Record<TransactionType, {
         description: "Moving money between accounts or digital wallets",
     },
     borrow: {
-        label: "Borrow / Loan",
+        label: "Borrow",
         dc: "cr",
         icon: "bi-box-arrow-in-down-right",
         badge: "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-300 dark:border-amber-800",
         color: "text-amber-600 dark:text-amber-400",
-        description: "Money received as a loan or borrowed from a party",
+        description: "Money received or borrowed from a party",
     },
     repayment: {
         label: "Repayment",
