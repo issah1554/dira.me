@@ -12,6 +12,7 @@ export interface Account {
     icon: string;
     openingBalance: number;
     currentBalance: number;
+    transactionCount: number;
     description?: string;
     createdAt?: Date;
     updatedAt?: Date;

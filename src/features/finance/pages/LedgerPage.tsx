@@ -249,6 +249,46 @@ export default function LedgerPage() {
         });
     }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo, searchQuery, parties]);
 
+    const filteredSummary = useMemo(() => {
+        const byCurrency: Record<string, { cashIn: number; cashOut: number; net: number }> = {};
+
+        filteredTransactions.forEach(tx => {
+            if (tx.status === "failed") return;
+
+            const currency = tx.currency || "TZS";
+            const amount = Number(tx.amount) || 0;
+            const isCashIn = tx.type === "income" || tx.type === "borrow" || tx.type === "collection" || tx.dc === "cr";
+            const totals = byCurrency[currency] || { cashIn: 0, cashOut: 0, net: 0 };
+
+            if (isCashIn) {
+                totals.cashIn += amount;
+                totals.net += amount;
+            } else {
+                totals.cashOut += amount;
+                totals.net -= amount;
+            }
+            byCurrency[currency] = totals;
+        });
+
+        return {
+            count: filteredTransactions.length,
+            byCurrency,
+        };
+    }, [filteredTransactions]);
+
+    const renderSummaryAmounts = (key: "cashIn" | "cashOut" | "net") => {
+        const entries = Object.entries(filteredSummary.byCurrency);
+        if (entries.length === 0) return <span>0 TZS</span>;
+
+        return entries.map(([currency, totals]) => (
+            <span key={currency} className="block">
+                {currency === "USD" ? "$ " : ""}
+                {totals[key].toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {currency !== "USD" ? ` ${currency}` : ""}
+            </span>
+        ));
+    };
+
     /* =======================
        Columns
     ======================= */
@@ -517,8 +557,8 @@ export default function LedgerPage() {
 
             {/* Expandable Advanced Filter Drawer (Cleanly Hidden by Default) */}
             {showFilters && (
-                <div className="p-4 bg-main-200/50 rounded-xl border border-main-300 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs animate-fade-in shadow-inner">
-                    <div>
+                <div className="p-4 bg-main-200/50 rounded-xl border border-main-300 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-12 gap-3 text-xs animate-fade-in shadow-inner overflow-hidden">
+                    <div className="min-w-0 xl:col-span-2">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Type</label>
                         <select
                             value={filterType}
@@ -532,7 +572,7 @@ export default function LedgerPage() {
                         </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0 xl:col-span-2">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Account</label>
                         <select
                             value={filterAccount}
@@ -546,7 +586,7 @@ export default function LedgerPage() {
                         </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0 xl:col-span-2">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Party / Counterparty</label>
                         <select
                             value={filterParty}
@@ -560,7 +600,7 @@ export default function LedgerPage() {
                         </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0 xl:col-span-2">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Status</label>
                         <select
                             value={filterStatus}
@@ -574,21 +614,21 @@ export default function LedgerPage() {
                         </select>
                     </div>
 
-                    <div>
+                    <div className="min-w-0 sm:col-span-2 xl:col-span-4">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Date Range</label>
-                        <div className="flex items-center gap-1.5">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 min-w-0">
                             <input
                                 type="date"
                                 value={filterDateFrom}
                                 onChange={e => setFilterDateFrom(e.target.value)}
-                                className="w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
                             />
                             <span className="text-main-400">—</span>
                             <input
                                 type="date"
                                 value={filterDateTo}
                                 onChange={e => setFilterDateTo(e.target.value)}
-                                className="w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
                             />
                         </div>
                     </div>
@@ -652,6 +692,34 @@ export default function LedgerPage() {
                     )}
                 </div>
             )}
+
+            {/* Summary of the current search and filters */}
+            <section className="rounded-xl border border-main-300 bg-main-200/50 p-3" aria-label="Filtered transaction summary">
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                    <h4 className="text-xs font-semibold text-main-700">Filtered Summary</h4>
+                    <span className="text-[11px] text-main-500">
+                        Showing {filteredSummary.count.toLocaleString()} of {transactions.length.toLocaleString()} transactions
+                    </span>
+                </div>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                    <div className="rounded-lg border border-main-300 bg-main-100 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-main-500">Transactions</p>
+                        <p className="text-base font-bold text-main-800">{filteredSummary.count.toLocaleString()}</p>
+                    </div>
+                    <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-emerald-700">Cash In</p>
+                        <div className="text-sm font-bold text-emerald-700 break-words">{renderSummaryAmounts("cashIn")}</div>
+                    </div>
+                    <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-rose-700">Cash Out</p>
+                        <div className="text-sm font-bold text-rose-700 break-words">{renderSummaryAmounts("cashOut")}</div>
+                    </div>
+                    <div className="rounded-lg border border-primary-300 bg-primary-100 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-primary-700">Net</p>
+                        <div className="text-sm font-bold text-primary-700 break-words">{renderSummaryAmounts("net")}</div>
+                    </div>
+                </div>
+            </section>
 
             {/* Add / Edit Ledger Entry Modal */}
             <Modal open={open} onClose={closeModal} size="md" position="center" blur>
@@ -858,6 +926,7 @@ export default function LedgerPage() {
                     data={filteredTransactions}
                     columns={columns}
                     rowsPerPage={10}
+                    showSearch={false}
                 />
             )}
         </div>

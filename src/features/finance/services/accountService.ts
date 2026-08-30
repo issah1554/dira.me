@@ -55,6 +55,7 @@ const rowToAccount = (row: AccountRow, currentBalance?: number): Account => {
         currency: curr,
         openingBalance: openingBal,
         currentBalance: computedCurrentBal,
+        transactionCount: 0,
         balance: formatCurrencyAmount(computedCurrentBal, curr),
         accountNumber: row.account_number || "",
         status: row.status,
@@ -100,6 +101,7 @@ const computeAccountBalances = (accounts: AccountRow[], transactions: any[]): Ac
         return {
             ...rowToAccount(accountRow, dynamicCurrentBalance),
             lastTransaction: latestDate || accountRow.last_transaction || "",
+            transactionCount: accountTxList.length,
         };
     });
 };

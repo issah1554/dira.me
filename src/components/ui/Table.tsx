@@ -33,6 +33,7 @@ type Props<T extends BaseRow> = {
   data: T[];
   columns: Column<T>[];
   rowsPerPage?: number;
+  showSearch?: boolean;
 };
 
 /* =========================================================
@@ -56,6 +57,7 @@ export default function CollapsibleTable<T extends BaseRow>({
   data,
   columns,
   rowsPerPage = 5,
+  showSearch = true,
 }: Props<T>) {
   const [search, setSearch] = useState("");
   const [sortConfig, setSortConfig] = useState<{
@@ -201,14 +203,16 @@ export default function CollapsibleTable<T extends BaseRow>({
   return (
     <div className="bg-main-200/80 backdrop-blur-md rounded-sm border border-main-300 overflow-hidden mt-4">
       {/* Toolbar */}
-      <div className="flex justify-between items-center p-4 gap-2">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="rounded-sm min-w-0 max-w-60 px-3 py-1 text-sm text-main-800 ring ring-main-300 focus:ring-main-400 outline-none"
-        />
+      <div className={`flex items-center p-4 gap-2 ${showSearch ? "justify-between" : "justify-end"}`}>
+        {showSearch && (
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="rounded-sm min-w-0 max-w-60 px-3 py-1 text-sm text-main-800 ring ring-main-300 focus:ring-main-400 outline-none"
+          />
+        )}
 
         <select
           value={rowsPerPageOption}

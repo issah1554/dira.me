@@ -5,6 +5,7 @@ import { TextInput } from "../../../components/ui/TextInput";
 import { useAccounts } from "../hooks/useAccounts";
 import Loader from "../../../components/ui/Loaders";
 import type { CurrencyCode } from "../../../types/account";
+import type { Account } from "../../../types/account";
 
 const accountTypes = [
     { value: "cash", label: "Cash" },
@@ -26,6 +27,9 @@ const accountTypeLabels: Record<string, string> = {
 
 export default function Accounts() {
     const [open, setOpen] = useState(false);
+    const [editAccount, setEditAccount] = useState<Account | null>(null);
+    const [viewAccount, setViewAccount] = useState<Account | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState("");
     const [, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
     const [formData, setFormData] = useState({
         name: "",
@@ -35,6 +39,13 @@ export default function Accounts() {
         openingBalance: "",
         description: ""
     });
+    const [editFormData, setEditFormData] = useState({
+        name: "",
+        type: "",
+        currency: "TZS" as CurrencyCode,
+        status: "active" as Account["status"],
+        description: ""
+    });
 
     const {
         accounts,
@@ -42,9 +53,34 @@ export default function Accounts() {
         loading,
         error,
         createAccount,
+        updateAccount,
         deleteAccount,
         formatCurrency
     } = useAccounts();
+
+    const handleOpenEdit = (account: Account) => {
+        setEditAccount(account);
+        setEditFormData({
+            name: account.name,
+            type: account.type,
+            currency: account.currency,
+            status: account.status,
+            description: account.description || ""
+        });
+    };
+
+    const handleEditSubmit = async (e: { preventDefault: () => void }) => {
+        e.preventDefault();
+        if (!editAccount) return;
+
+        try {
+            await updateAccount(editAccount.id, editFormData);
+            setToast({ message: "Account updated successfully!", type: "success" });
+            setEditAccount(null);
+        } catch {
+            setToast({ message: "Failed to update account", type: "error" });
+        }
+    };
 
     const handleClose = () => {
         setOpen(false);
@@ -77,15 +113,27 @@ export default function Accounts() {
         }
     };
 
-    const handleDeleteAccount = async (accountId: string, accountName: string) => {
-        if (window.confirm(`Are you sure you want to delete "${accountName}"?`)) {
-            try {
-                await deleteAccount(accountId);
-                setToast({ message: "Account deleted successfully!", type: 'success' });
-            } catch (err) {
-                setToast({ message: "Failed to delete account", type: 'error' });
-            }
+    const handleDeleteAccount = async () => {
+        if (!viewAccount || deleteConfirmation !== viewAccount.name) return;
+
+        try {
+            await deleteAccount(viewAccount.id);
+            setToast({ message: "Account deleted successfully!", type: 'success' });
+            setViewAccount(null);
+            setDeleteConfirmation("");
+        } catch {
+            setToast({ message: "Failed to delete account", type: 'error' });
         }
+    };
+
+    const handleOpenView = (account: Account) => {
+        setViewAccount(account);
+        setDeleteConfirmation("");
+    };
+
+    const handleCloseView = () => {
+        setViewAccount(null);
+        setDeleteConfirmation("");
     };
 
     const getStatusBadge = (status: string) => {
@@ -190,9 +238,9 @@ export default function Accounts() {
             </div>
 
             {/* Accounts Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {accounts.map(account => (
-                    <div key={account.id} className="bg-main-200/60 rounded-lg border border-main-300 p-5 hover:ring-primary/70 hover:ring-2 transition-shadow">
+                    <div key={account.id} className="group bg-main-200/60 rounded-lg border border-main-300 p-5 hover:ring-primary/70 hover:ring-2 transition-shadow">
                         <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
                                 <div className={`w-10 h-10 ${getTypeColor(account.type)} rounded-lg flex items-center justify-center`}>
@@ -223,26 +271,37 @@ export default function Accounts() {
                                 <span className="font-bold text-lg text-main-800">{account.balance}</span>
                             </div>
                             <div className="flex justify-between items-center text-sm">
-                                <span className="text-main-500">Last Transaction:</span>
-                                <span className="text-main-700">{account.lastTransaction}</span>
+                                <span className="text-main-500">Transactions:</span>
+                                <span className="inline-flex items-center gap-1.5 font-semibold text-main-700">
+                                    <i className="bi bi-receipt" />
+                                    {account.transactionCount}
+                                </span>
                             </div>
                         </div>
 
-                        <div className="flex gap-2 mt-4 pt-4 border-t border-main-300">
+                        <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-main-300 transition-opacity md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-focus-within:opacity-100 md:group-focus-within:pointer-events-auto">
+                            <Button
+                                color="primary"
+                                size="xs"
+                                variant="outline"
+                                className="w-8 h-8 p-0"
+                                onClick={() => handleOpenEdit(account)}
+                                disabled={loading}
+                                aria-label={`Edit ${account.name}`}
+                                title="Edit account"
+                            >
+                                <i className="bi bi-pencil-square" aria-hidden="true" />
+                            </Button>
                             <Button
                                 color="neutral"
                                 size="xs"
                                 variant="outline"
-                                className="flex-1"
-                                onClick={() => handleDeleteAccount(account.id, account.name)}
-                                disabled={loading}
+                                className="w-8 h-8 p-0"
+                                onClick={() => handleOpenView(account)}
+                                aria-label={`View ${account.name}`}
+                                title="View account details"
                             >
-                                {loading ? (
-                                    <i className="bi bi-arrow-clockwise animate-spin mr-1" />
-                                ) : (
-                                    <i className="bi bi-trash mr-1" />
-                                )}
-                                Delete
+                                <i className="bi bi-eye" aria-hidden="true" />
                             </Button>
                         </div>
                     </div>
@@ -384,6 +443,164 @@ export default function Accounts() {
                                     Create Account
                                 </>
                             )}
+                        </Button>
+                    </ModalFooter>
+                </form>
+            </Modal>
+
+            {/* Account Details Modal */}
+            <Modal open={Boolean(viewAccount)} onClose={handleCloseView} size="md" position="center" blur closeOnBackdrop closeOnEsc>
+                <ModalHeader
+                    title="Account Details"
+                    icon="bi-wallet2"
+                    onClose={handleCloseView}
+                />
+
+                {viewAccount && (
+                    <>
+                        <ModalBody>
+                            <div className="flex items-center gap-3 rounded-lg border border-main-300 bg-main-200/60 p-4">
+                                <div className={`w-12 h-12 ${getTypeColor(viewAccount.type)} rounded-lg flex items-center justify-center text-lg`}>
+                                    <i className={`bi ${viewAccount.icon}`} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-semibold text-lg truncate">{viewAccount.name}</h4>
+                                    <p className="text-sm text-main-500">{accountTypeLabels[viewAccount.type] || viewAccount.type}</p>
+                                </div>
+                                {getStatusBadge(viewAccount.status)}
+                            </div>
+
+                            <dl className="divide-y divide-main-300 rounded-lg border border-main-300">
+                                {[
+                                    ["Current Balance", viewAccount.balance],
+                                    ["Currency", viewAccount.currency],
+                                    ["Account Number", viewAccount.accountNumber || "Not provided"],
+                                    ["Transactions", String(viewAccount.transactionCount)],
+                                    ["Last Transaction", viewAccount.lastTransaction || "No transactions"],
+                                    ["Description", viewAccount.description || "No description"],
+                                ].map(([label, value]) => (
+                                    <div key={label} className="flex items-start justify-between gap-4 px-4 py-3">
+                                        <dt className="text-sm text-main-500">{label}</dt>
+                                        <dd className="text-sm font-medium text-main-800 text-right">{value}</dd>
+                                    </div>
+                                ))}
+                            </dl>
+
+                            <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                <div className="flex items-start gap-2 mb-3">
+                                    <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
+                                    <div>
+                                        <h5 className="font-semibold text-red-800">Delete account</h5>
+                                        <p className="text-xs text-red-700">
+                                            Type <strong>{viewAccount.name}</strong> to enable deletion. This action cannot be undone.
+                                        </p>
+                                    </div>
+                                </div>
+                                <input
+                                    className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    value={deleteConfirmation}
+                                    onChange={e => setDeleteConfirmation(e.target.value)}
+                                    placeholder={viewAccount.name}
+                                    autoComplete="off"
+                                />
+                                <Button
+                                    color="error"
+                                    size="sm"
+                                    className="mt-3 w-full"
+                                    onClick={handleDeleteAccount}
+                                    disabled={loading || deleteConfirmation !== viewAccount.name}
+                                >
+                                    {loading ? <i className="bi bi-arrow-clockwise animate-spin mr-2" /> : <i className="bi bi-trash mr-2" />}
+                                    Delete Account
+                                </Button>
+                            </div>
+                        </ModalBody>
+
+                        <ModalFooter>
+                            <Button type="button" color="neutral" size="sm" variant="outline" onClick={handleCloseView} disabled={loading}>
+                                Close
+                            </Button>
+                        </ModalFooter>
+                    </>
+                )}
+            </Modal>
+
+            {/* Edit Account Modal */}
+            <Modal open={Boolean(editAccount)} onClose={() => setEditAccount(null)} size="md" position="center" blur closeOnBackdrop closeOnEsc>
+                <ModalHeader
+                    title="Edit Account"
+                    icon="bi-pencil-square"
+                    onClose={() => setEditAccount(null)}
+                />
+
+                <form className="flex flex-col flex-1 min-h-0" onSubmit={handleEditSubmit}>
+                    <ModalBody>
+                        <TextInput
+                            label="Account Name"
+                            labelBgColor="bg-main-100"
+                            color="primary"
+                            size="md"
+                            rounded="md"
+                            value={editFormData.name}
+                            onChange={e => setEditFormData(p => ({ ...p, name: e.target.value }))}
+                            required
+                        />
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-main-700 mb-2">Account Type</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    value={editFormData.type}
+                                    onChange={e => setEditFormData(p => ({ ...p, type: e.target.value }))}
+                                    required
+                                >
+                                    {accountTypes.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-main-700 mb-2">Currency</label>
+                                <select
+                                    className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                                    value={editFormData.currency}
+                                    onChange={e => setEditFormData(p => ({ ...p, currency: e.target.value as CurrencyCode }))}
+                                >
+                                    <option value="TZS">TZS — Tanzanian Shilling</option>
+                                    <option value="USD">USD — US Dollar ($)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-main-700 mb-2">Status</label>
+                            <select
+                                className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary"
+                                value={editFormData.status}
+                                onChange={e => setEditFormData(p => ({ ...p, status: e.target.value as Account["status"] }))}
+                            >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="pending">Pending</option>
+                            </select>
+                        </div>
+
+                        <TextInput
+                            label="Description (Optional)"
+                            labelBgColor="bg-main-100"
+                            color="primary"
+                            size="md"
+                            rounded="md"
+                            value={editFormData.description}
+                            onChange={e => setEditFormData(p => ({ ...p, description: e.target.value }))}
+                        />
+                    </ModalBody>
+
+                    <ModalFooter>
+                        <Button type="button" color="neutral" size="sm" variant="outline" onClick={() => setEditAccount(null)} disabled={loading}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" color="primary" size="sm" disabled={loading}>
+                            {loading ? <><i className="bi bi-arrow-clockwise animate-spin mr-2" />Saving...</> : <><i className="bi bi-check-lg mr-2" />Save Changes</>}
                         </Button>
                     </ModalFooter>
                 </form>
