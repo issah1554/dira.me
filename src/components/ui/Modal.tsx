@@ -122,7 +122,7 @@ export function ModalBody({ children, className = "" }: ModalBodyProps) {
 export function ModalFooter({ children, className = "" }: ModalFooterProps) {
   return (
     <div
-      className={`flex items-center justify-end gap-3 px-6 py-4 border-t border-main-300 shrink-0 bg-main-100/90 dark:bg-main-900/90 backdrop-blur-sm ${className}`}
+      className={`flex items-center justify-end gap-3 px-6 py-4 border-t border-main-300 shrink-0 bg-main-100/90  backdrop-blur-sm ${className}`}
     >
       {children}
     </div>

@@ -1227,7 +1227,7 @@ export default function LedgerPage() {
                         )}
                     </ModalBody>
 
-                    <ModalFooter>
+                    <ModalFooter >
                         <Button variant="outline" size="sm" onClick={closeModal} color="primary" type="button">
                             Cancel
                         </Button>
