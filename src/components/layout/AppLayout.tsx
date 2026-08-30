@@ -4,6 +4,7 @@ import { Sidebar } from "./sidenavbar/SideNavBar";
 import TopNav from "./TopNavBar";
 import Footer from "./Footer";
 import { SidebarProvider, useSidebar } from "../../contexts/SidebarContext";
+import { FloatingChatbot } from "../../features/ai/components/FloatingChatbot";
 
 /* =======================
    Responsive hook
@@ -47,6 +48,8 @@ function AppLayoutContent() {
             ? "ml-16"
             : "ml-64";
 
+    const isChatPage = location.pathname === "/ai/chat" || location.pathname === "/ai/assistant";
+
     return (
         <div className="flex min-h-screen bg-main-100 text-main-900">
             {/* Sidebar */}
@@ -76,6 +79,9 @@ function AppLayoutContent() {
                 </main>
 
                 <Footer />
+
+                {/* Floating AI Chatbot Assistant */}
+                {!isChatPage && <FloatingChatbot />}
             </div>
         </div>
     );

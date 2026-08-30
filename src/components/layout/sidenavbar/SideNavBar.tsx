@@ -95,6 +95,7 @@ export function Sidebar() {
                     <NavItems
                         items={[
                             { label: "Dashboard", to: "/home", icon: <i className="bi bi-house" /> },
+                            { label: "AI Assistant", to: "/ai/chat", icon: <i className="bi bi-stars text-primary" /> },
                             {
                                 label: "Tasks",
                                 icon: <i className="bi bi-check-circle" />,

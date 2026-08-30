@@ -57,6 +57,16 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
 
                 {/* Right section */}
                 <div className="flex items-center gap-2 sm:gap-4">
+                    {/* Dira AI Quick Action */}
+                    <Link
+                        to="/ai/chat"
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-gradient-to-r from-primary/15 to-purple-500/15 text-primary hover:bg-primary/20 border border-primary/30 transition-all shadow-sm"
+                        title="Open Dira AI Financial Assistant"
+                    >
+                        <i className="bi bi-stars text-xs text-primary" />
+                        <span className="hidden sm:inline">Dira AI</span>
+                    </Link>
+
                     {/* PWA Install Button */}
                     {isInstallable && (
                         <button

@@ -26,6 +26,8 @@ import { AuthProvider } from "./contexts/AuthContext";
 import ProtectedRoute from "./components/layout/ProtectedRoute";
 import { AccountsGridPage } from "./features/finance/pages/AccountsPage2";
 
+import ChatPage from "./features/ai/pages/ChatPage";
+
 function App() {
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
@@ -48,6 +50,10 @@ function App() {
                 {/* app layout */}
                 <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
                   <Route path="/home" element={<Dashboard />} />
+
+                  {/* AI Assistant */}
+                  <Route path="/ai/chat" element={<ChatPage />} />
+                  <Route path="/ai/assistant" element={<ChatPage />} />
 
                   {/* Todo Management */}
                   <Route path="/todos" element={<TodoList />} />
