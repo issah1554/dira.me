@@ -1,32 +1,29 @@
 // src/features/ai/components/FloatingChatbot.tsx
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { geminiService, type ChatMessage } from "../services/geminiService";
+import { useAiChat } from "../hooks/useAiChat";
+import { TransactionDraftCard } from "./TransactionDraftCard";
+import { Toast } from "../../../components/ui/Toast";
 
 const SUGGESTED_PROMPTS = [
     "📊 Summarize my recent spending",
-    "💰 What is my current total balance?",
-    "🏷️ How much did I spend on Food and Transport?",
-    "🤝 Who are my counterparties and recent transactions?",
-    "💡 Give me 3 tips to optimize my monthly budget",
+    "💰 Salio la akaunti zangu zote",
+    "🏷️ How much did I spend on Food?",
+    "📝 Nimelipa 20,000 ya mafuta kwa NMB",
+    "💡 Give me 3 tips to optimize my budget",
 ];
 
 export function FloatingChatbot() {
     const [isOpen, setIsOpen] = useState(false);
-    const [messages, setMessages] = useState<ChatMessage[]>(() => {
-        return [
-            {
-                id: "welcome-1",
-                role: "model",
-                content:
-                    "Hello! 👋 I'm **Dira AI**, your personal financial assistant. I have live access to your accounts, categories, and transactions. How can I assist your financial planning or bookkeeping today?",
-                timestamp: new Date(),
-            },
-        ];
-    });
     const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const {
+        messages,
+        loading,
+        error,
+        sendMessage,
+        clearCurrentChat,
+        executeDraftAction,
+    } = useAiChat();
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -38,60 +35,19 @@ export function FloatingChatbot() {
         }
     }, [isOpen, messages, loading]);
 
-    const handleSendMessage = async (textToSend?: string) => {
+    const handleSend = (textToSend?: string) => {
         const query = (textToSend || input).trim();
         if (!query || loading) return;
-
-        const userMsg: ChatMessage = {
-            id: `msg-user-${Date.now()}`,
-            role: "user",
-            content: query,
-            timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, userMsg]);
         if (!textToSend) setInput("");
-        setLoading(true);
-        setError(null);
-
-        try {
-            const history = messages
-                .filter(m => m.id !== "welcome-1")
-                .map(m => ({ role: m.role, content: m.content }));
-
-            const responseText = await geminiService.sendMessage(history, query);
-
-            const aiMsg: ChatMessage = {
-                id: `msg-ai-${Date.now()}`,
-                role: "model",
-                content: responseText,
-                timestamp: new Date(),
-            };
-
-            setMessages(prev => [...prev, aiMsg]);
-        } catch (err: any) {
-            console.error("AI Error:", err);
-            setError(err?.message || "Failed to get a response from Gemini AI. Please check your connection.");
-        } finally {
-            setLoading(false);
-        }
+        sendMessage(query);
     };
 
-    const handleClearChat = () => {
-        setMessages([
-            {
-                id: "welcome-1",
-                role: "model",
-                content:
-                    "Chat cleared! ✨ How can I help with your ledger, accounts, or finances?",
-                timestamp: new Date(),
-            },
-        ]);
-        setError(null);
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        Toast.fire({ icon: "success", title: "Copied to clipboard" });
     };
 
     const formatMessageContent = (text: string) => {
-        // Simple and clean markdown formatting helper for bold, bullet points, headers
         return text.split("\n").map((line, idx) => {
             const isBullet = line.trim().startsWith("- ") || line.trim().startsWith("* ");
             const isNumbered = /^\d+\.\s/.test(line.trim());
@@ -101,7 +57,6 @@ export function FloatingChatbot() {
             if (isBullet) formattedLine = line.trim().substring(2);
             if (isHeader) formattedLine = line.trim().replace(/^#{2,3}\s/, "");
 
-            // Bold styling **text**
             const parts = formattedLine.split(/(\*\*.*?\*\*)/g);
 
             const renderedParts = parts.map((part, pIdx) => {
@@ -159,9 +114,9 @@ export function FloatingChatbot() {
 
             {/* Chatbot Window */}
             {isOpen && (
-                <div className="w-[92vw] sm:w-[420px] h-[560px] max-h-[85vh] bg-main-100 dark:bg-main-200 border border-main-300 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+                <div className="w-[94vw] sm:w-[430px] h-[580px] max-h-[85vh] bg-main-100 dark:bg-main-200 border border-main-300 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
                     {/* Header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-primary/95 to-indigo-700 text-white flex items-center justify-between shadow-sm shrink-0">
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary/95 via-indigo-600 to-purple-700 text-white flex items-center justify-between shadow-sm shrink-0">
                         <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
                                 <i className="bi bi-stars text-white text-base" />
@@ -170,21 +125,21 @@ export function FloatingChatbot() {
                                 <div className="flex items-center gap-1.5">
                                     <h4 className="font-bold text-sm leading-tight">Dira AI</h4>
                                     <span className="px-1.5 py-0.2 bg-white/20 text-white text-[9px] font-semibold rounded-full">
-                                        Gemini
+                                        Multi-Model Engine
                                     </span>
                                 </div>
                                 <p className="text-[10px] text-white/80 flex items-center gap-1">
                                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                                    Live Financial Context Active
+                                    Live Financial Tools Connected
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-1">
                             <button
-                                onClick={handleClearChat}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
-                                title="Clear conversation"
+                                onClick={clearCurrentChat}
+                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                title="Reset conversation"
                                 aria-label="Clear chat"
                             >
                                 <i className="bi bi-arrow-counterclockwise text-sm" />
@@ -200,7 +155,7 @@ export function FloatingChatbot() {
                             </Link>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
                                 title="Minimize"
                                 aria-label="Close chat"
                             >
@@ -210,7 +165,7 @@ export function FloatingChatbot() {
                     </div>
 
                     {/* Messages Thread */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-main-100 dark:bg-main-200">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-main-100 dark:bg-main-200">
                         {messages.map(msg => {
                             const isUser = msg.role === "user";
                             return (
@@ -225,10 +180,10 @@ export function FloatingChatbot() {
                                     )}
 
                                     <div
-                                        className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl text-xs space-y-1 ${
+                                        className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs space-y-1.5 ${
                                             isUser
                                                 ? "bg-primary text-white rounded-tr-none shadow-sm"
-                                                : "bg-main-200/80 border border-main-300 text-main-800 rounded-tl-none"
+                                                : "bg-main-200/80 border border-main-300 text-main-800 rounded-tl-none shadow-sm"
                                         }`}
                                     >
                                         {isUser ? (
@@ -236,16 +191,49 @@ export function FloatingChatbot() {
                                         ) : (
                                             formatMessageContent(msg.content)
                                         )}
-                                        <p
-                                            className={`text-[9px] mt-1 text-right ${
-                                                isUser ? "text-white/70" : "text-main-400"
+
+                                        {/* Action Card if draft was created */}
+                                        {msg.draftAction && (
+                                            <TransactionDraftCard
+                                                messageId={msg.id}
+                                                draft={msg.draftAction}
+                                                isExecuted={msg.isExecuted}
+                                                onExecute={executeDraftAction}
+                                            />
+                                        )}
+
+                                        {/* Message Footer: Model Badge & Timestamp & Copy */}
+                                        <div
+                                            className={`flex items-center justify-between text-[9px] pt-1 border-t ${
+                                                isUser
+                                                    ? "border-white/20 text-white/70"
+                                                    : "border-main-300/60 text-main-400"
                                             }`}
                                         >
-                                            {new Date(msg.timestamp).toLocaleTimeString([], {
-                                                hour: "2-digit",
-                                                minute: "2-digit",
-                                            })}
-                                        </p>
+                                            <span className="flex items-center gap-1">
+                                                {msg.modelUsed && (
+                                                    <span className="px-1.5 py-0.2 bg-main-300/40 rounded text-[8px] font-medium truncate max-w-28">
+                                                        {msg.modelUsed}
+                                                    </span>
+                                                )}
+                                                <span>
+                                                    {new Date(msg.timestamp).toLocaleTimeString([], {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                    })}
+                                                </span>
+                                            </span>
+
+                                            {!isUser && (
+                                                <button
+                                                    onClick={() => handleCopy(msg.content)}
+                                                    className="hover:text-primary transition-colors cursor-pointer"
+                                                    title="Copy response"
+                                                >
+                                                    <i className="bi bi-clipboard text-[10px]" />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -253,7 +241,7 @@ export function FloatingChatbot() {
 
                         {/* Loading Typing Indicator */}
                         {loading && (
-                            <div className="flex items-center gap-2 text-main-500 text-xs">
+                            <div className="flex items-center gap-2 text-main-500 text-xs animate-fade-in">
                                 <div className="w-7 h-7 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 border border-primary/30">
                                     <i className="bi bi-stars text-xs" />
                                 </div>
@@ -269,7 +257,7 @@ export function FloatingChatbot() {
                             <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
                                 <i className="bi bi-exclamation-triangle-fill text-sm mt-0.5 shrink-0" />
                                 <div>
-                                    <p className="font-semibold">Gemini Error</p>
+                                    <p className="font-semibold">Notice</p>
                                     <p className="text-[11px] mt-0.5">{error}</p>
                                 </div>
                             </div>
@@ -278,13 +266,13 @@ export function FloatingChatbot() {
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Suggested Prompts (if chat is fresh) */}
+                    {/* Suggested Prompts (if chat has few messages) */}
                     {messages.length <= 2 && !loading && (
                         <div className="px-3 py-2 bg-main-200/50 border-t border-main-300 overflow-x-auto no-scrollbar flex items-center gap-1.5 shrink-0">
                             {SUGGESTED_PROMPTS.map((prompt, idx) => (
                                 <button
                                     key={idx}
-                                    onClick={() => handleSendMessage(prompt.replace(/^[^\w]+/, ""))}
+                                    onClick={() => handleSend(prompt.replace(/^[^\w]+/, ""))}
                                     className="whitespace-nowrap px-2.5 py-1 bg-main-100 hover:bg-primary/10 hover:text-primary hover:border-primary/40 border border-main-300 rounded-full text-[11px] font-medium text-main-600 transition-all cursor-pointer shrink-0"
                                 >
                                     {prompt}
@@ -297,7 +285,7 @@ export function FloatingChatbot() {
                     <form
                         onSubmit={e => {
                             e.preventDefault();
-                            handleSendMessage();
+                            handleSend();
                         }}
                         className="p-2.5 bg-main-200 border-t border-main-300 flex items-center gap-2 shrink-0"
                     >
@@ -306,7 +294,7 @@ export function FloatingChatbot() {
                             type="text"
                             value={input}
                             onChange={e => setInput(e.target.value)}
-                            placeholder="Ask Dira AI anything..."
+                            placeholder="Uliza chochote / Ask Dira AI anything..."
                             disabled={loading}
                             className="flex-1 bg-main-100 border border-main-300 rounded-xl px-3.5 py-2 text-xs text-main placeholder:text-main-400 focus:outline-none focus:ring-2 focus:ring-primary/40"
                         />

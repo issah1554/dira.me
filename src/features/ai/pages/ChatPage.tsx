@@ -1,42 +1,45 @@
 // src/features/ai/pages/ChatPage.tsx
 import { useState, useRef, useEffect } from "react";
-import { geminiService, type ChatMessage } from "../services/geminiService";
+import { useAiChat } from "../hooks/useAiChat";
+import { TransactionDraftCard } from "../components/TransactionDraftCard";
 import { useAccounts } from "../../finance/hooks/useAccounts";
 import { useTransactions } from "../../finance/hooks/useTransactions";
+import { Toast } from "../../../components/ui/Toast";
 
 const PROMPT_CATEGORIES = [
     {
-        title: "Financial Overview",
+        title: "Financial Overview / Salio",
         icon: "bi-pie-chart",
         prompts: [
             "What is my net balance and active accounts breakdown?",
-            "Summarize all transactions from this month",
+            "Salio la akaunti zangu zote",
             "Show my top 3 biggest expenses",
         ],
     },
     {
-        title: "Budgeting & Saving",
+        title: "Action & Ledger / Miamala",
+        icon: "bi-journal-plus",
+        prompts: [
+            "Nimelipa 35,000 ya Umeme kupitia Benki",
+            "I spent 15,000 TZS on Fuel via Cash",
+            "Nimepokea 500k mshahara wa mwezi huu",
+        ],
+    },
+    {
+        title: "Budgeting & Saving / Bajeti",
         icon: "bi-piggy-bank",
         prompts: [
             "How can I cut expenses based on my spending patterns?",
-            "Create a realistic 50/30/20 budget plan for my income",
+            "Nipe ushauri wa bajeti wa 50/30/20",
             "Are there any recurring fees or unusual transactions?",
         ],
     },
     {
-        title: "Debts & Counterparties",
+        title: "Debts & Counterparties / Madeni",
         icon: "bi-people",
         prompts: [
             "Who are my registered counterparties and what is my transaction history with them?",
-            "Analyze my borrowed vs lent money",
-        ],
-    },
-    {
-        title: "Ledger Assistant",
-        icon: "bi-journal-plus",
-        prompts: [
-            "Draft an expense entry: 35,000 TZS for Electricity via Bank",
-            "Explain how double-entry bookkeeping works for transfers",
+            "Nani ananidai au nani ninamdai?",
         ],
     },
 ];
@@ -45,19 +48,22 @@ export default function ChatPage() {
     const { summary, formatCurrency } = useAccounts();
     const { data: transactions } = useTransactions();
 
-    const [messages, setMessages] = useState<ChatMessage[]>(() => [
-        {
-            id: "welcome-full-1",
-            role: "model",
-            content:
-                "Welcome to **Dira AI Assistant**! 🌟\n\nI am connected to your live Dira ledger, including your accounts, categories, and transactions. You can ask me to analyze your finances, give budget recommendations, breakdown category spending, or help format new ledger entries.\n\nHow can I help you today?",
-            timestamp: new Date(),
-        },
-    ]);
+    const {
+        sessions,
+        activeSessionId,
+        messages,
+        loading,
+        error,
+        createNewSession,
+        switchSession,
+        deleteSession,
+        clearCurrentChat,
+        sendMessage,
+        executeDraftAction,
+    } = useAiChat();
 
     const [input, setInput] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [sidebarTab, setSidebarTab] = useState<"history" | "prompts">("prompts");
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -66,56 +72,16 @@ export default function ChatPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [messages, loading]);
 
-    const handleSendMessage = async (textToSend?: string) => {
+    const handleSend = (textToSend?: string) => {
         const query = (textToSend || input).trim();
         if (!query || loading) return;
-
-        const userMsg: ChatMessage = {
-            id: `msg-${Date.now()}`,
-            role: "user",
-            content: query,
-            timestamp: new Date(),
-        };
-
-        setMessages(prev => [...prev, userMsg]);
         if (!textToSend) setInput("");
-        setLoading(true);
-        setError(null);
-
-        try {
-            const history = messages
-                .filter(m => m.id !== "welcome-full-1")
-                .map(m => ({ role: m.role, content: m.content }));
-
-            const responseText = await geminiService.sendMessage(history, query);
-
-            const aiMsg: ChatMessage = {
-                id: `ai-${Date.now()}`,
-                role: "model",
-                content: responseText,
-                timestamp: new Date(),
-            };
-
-            setMessages(prev => [...prev, aiMsg]);
-        } catch (err: any) {
-            console.error("AI Error:", err);
-            setError(err?.message || "Failed to communicate with Gemini AI.");
-        } finally {
-            setLoading(false);
-        }
+        sendMessage(query);
     };
 
-    const handleClearChat = () => {
-        setMessages([
-            {
-                id: "welcome-full-1",
-                role: "model",
-                content:
-                    "Conversation reset! 🚀 How can I assist with your financial analysis or budgeting?",
-                timestamp: new Date(),
-            },
-        ]);
-        setError(null);
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        Toast.fire({ icon: "success", title: "Copied to clipboard" });
     };
 
     const formatMessageContent = (text: string) => {
@@ -166,41 +132,52 @@ export default function ChatPage() {
     };
 
     return (
-        <div className="flex-1 flex flex-col lg:flex-row gap-6 min-h-[calc(100vh-120px)] text-main-700">
-            {/* Left / Main Chat Container */}
-            <div className="flex-1 flex flex-col bg-main-200/50 border border-main-300 rounded-2xl overflow-hidden shadow-sm">
+        <div className="flex-1 flex flex-col lg:flex-row gap-5 min-h-[calc(100vh-120px)] text-main-700">
+            {/* Main Chat Container */}
+            <div className="flex-1 flex flex-col bg-main-200/50 border border-main-300 rounded-2xl overflow-hidden shadow-sm min-h-[500px]">
                 {/* Chat Header */}
-                <div className="px-5 py-4 bg-main-100 border-b border-main-300 flex items-center justify-between">
+                <div className="px-5 py-3.5 bg-main-100 border-b border-main-300 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary to-purple-600 text-white flex items-center justify-center shadow-sm">
-                            <i className="bi bi-stars text-xl" />
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-sm">
+                            <i className="bi bi-stars text-xl animate-pulse" />
                         </div>
                         <div>
                             <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-base text-main-900">Dira AI Financial Advisor</h3>
+                                <h3 className="font-bold text-base text-main-900">Dira AI Assistant</h3>
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
-                                    Gemini 2.5
+                                    Multi-Model
                                 </span>
                             </div>
                             <p className="text-xs text-main-500 flex items-center gap-1.5 mt-0.5">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                                Synchronized with {summary.activeAccounts} accounts & {transactions.length} transactions
+                                Connected to {summary.activeAccounts} accounts & {transactions.length} transactions
                             </p>
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleClearChat}
-                        className="px-3 py-1.5 text-xs font-medium text-main-600 hover:text-main-900 hover:bg-main-200 border border-main-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                        title="Clear conversation"
-                    >
-                        <i className="bi bi-arrow-counterclockwise" />
-                        <span>Clear Chat</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={createNewSession}
+                            className="px-3 py-1.5 text-xs font-semibold bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                            title="Start fresh conversation"
+                        >
+                            <i className="bi bi-plus-lg text-xs" />
+                            <span>New Chat</span>
+                        </button>
+
+                        <button
+                            onClick={clearCurrentChat}
+                            className="px-3 py-1.5 text-xs font-medium text-main-600 hover:text-main-900 hover:bg-main-200 border border-main-300 rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                            title="Reset current conversation"
+                        >
+                            <i className="bi bi-arrow-counterclockwise" />
+                            <span className="hidden sm:inline">Reset</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-main-100/60 dark:bg-main-200/30 min-h-[360px]">
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-main-100/60 dark:bg-main-200/30">
                     {messages.map(msg => {
                         const isUser = msg.role === "user";
                         return (
@@ -215,7 +192,7 @@ export default function ChatPage() {
                                 )}
 
                                 <div
-                                    className={`max-w-[85%] sm:max-w-[75%] px-4 py-3 rounded-2xl space-y-1.5 ${
+                                    className={`max-w-[88%] sm:max-w-[78%] px-4 py-3 rounded-2xl space-y-2 ${
                                         isUser
                                             ? "bg-primary text-white rounded-tr-none shadow-sm"
                                             : "bg-main-100 border border-main-300 text-main-800 rounded-tl-none shadow-sm"
@@ -226,16 +203,49 @@ export default function ChatPage() {
                                     ) : (
                                         formatMessageContent(msg.content)
                                     )}
-                                    <p
-                                        className={`text-[10px] mt-1.5 text-right ${
-                                            isUser ? "text-white/70" : "text-main-400"
+
+                                    {/* Action Card if transaction was drafted */}
+                                    {msg.draftAction && (
+                                        <TransactionDraftCard
+                                            messageId={msg.id}
+                                            draft={msg.draftAction}
+                                            isExecuted={msg.isExecuted}
+                                            onExecute={executeDraftAction}
+                                        />
+                                    )}
+
+                                    {/* Message Footer: Model Badge & Timestamp & Copy */}
+                                    <div
+                                        className={`flex items-center justify-between text-[10px] pt-1.5 border-t ${
+                                            isUser
+                                                ? "border-white/20 text-white/70"
+                                                : "border-main-300/60 text-main-400"
                                         }`}
                                     >
-                                        {new Date(msg.timestamp).toLocaleTimeString([], {
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                        })}
-                                    </p>
+                                        <span className="flex items-center gap-1.5">
+                                            {msg.modelUsed && (
+                                                <span className="px-1.5 py-0.2 bg-main-300/50 rounded text-[9px] font-medium">
+                                                    {msg.modelUsed}
+                                                </span>
+                                            )}
+                                            <span>
+                                                {new Date(msg.timestamp).toLocaleTimeString([], {
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                })}
+                                            </span>
+                                        </span>
+
+                                        {!isUser && (
+                                            <button
+                                                onClick={() => handleCopy(msg.content)}
+                                                className="hover:text-primary transition-colors cursor-pointer"
+                                                title="Copy response"
+                                            >
+                                                <i className="bi bi-clipboard text-xs" />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         );
@@ -259,7 +269,7 @@ export default function ChatPage() {
                         <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-start gap-2.5">
                             <i className="bi bi-exclamation-triangle-fill text-base mt-0.5 shrink-0" />
                             <div>
-                                <p className="font-semibold">AI Assistant Notice</p>
+                                <p className="font-semibold">Notice</p>
                                 <p className="text-xs mt-0.5">{error}</p>
                             </div>
                         </div>
@@ -272,7 +282,7 @@ export default function ChatPage() {
                 <form
                     onSubmit={e => {
                         e.preventDefault();
-                        handleSendMessage();
+                        handleSend();
                     }}
                     className="p-4 bg-main-100 border-t border-main-300 flex items-center gap-3"
                 >
@@ -281,14 +291,14 @@ export default function ChatPage() {
                         type="text"
                         value={input}
                         onChange={e => setInput(e.target.value)}
-                        placeholder="Ask Dira AI anything about your ledger, expenses, or financial plans..."
+                        placeholder="Uliza chochote / Ask Dira AI anything about ledger, expenses, or budgets..."
                         disabled={loading}
                         className="flex-1 bg-main-200/70 border border-main-300 rounded-xl px-4 py-3 text-sm text-main placeholder:text-main-400 focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all"
                     />
                     <button
                         type="submit"
                         disabled={loading || !input.trim()}
-                        className="px-5 py-3 rounded-xl bg-primary text-white font-medium flex items-center gap-2 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer shrink-0"
+                        className="px-5 py-3 rounded-xl bg-primary text-white font-semibold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer shrink-0"
                     >
                         {loading ? (
                             <>
@@ -305,13 +315,13 @@ export default function ChatPage() {
                 </form>
             </div>
 
-            {/* Right Sidebar: Context & Suggested Topics */}
-            <div className="w-full lg:w-80 flex flex-col gap-4 shrink-0">
+            {/* Right Sidebar: Tabs for Chat History & Context / Prompts */}
+            <div className="w-full lg:w-80 flex flex-col gap-3 shrink-0">
                 {/* Balance & Context Widget */}
                 <div className="bg-main-200/60 border border-main-300 rounded-2xl p-4 space-y-3 shadow-sm">
                     <h4 className="font-bold text-sm text-main-900 flex items-center gap-2">
                         <i className="bi bi-wallet2 text-primary" />
-                        Live Account Context
+                        Live Account Balances
                     </h4>
 
                     <div className="bg-main-100 rounded-xl p-3 border border-main-300">
@@ -320,45 +330,110 @@ export default function ChatPage() {
                         <p className="text-[11px] text-main-400 mt-1">Across {summary.activeAccounts} active account(s)</p>
                     </div>
 
-                    <div className="text-xs text-main-500 space-y-1">
-                        <p className="flex items-center gap-1.5">
-                            <i className="bi bi-check2-circle text-emerald-500" />
-                            Transactions synced: <strong className="text-main-700">{transactions.length}</strong>
-                        </p>
-                        <p className="flex items-center gap-1.5">
-                            <i className="bi bi-shield-check text-primary" />
-                            Private & secure prompt isolation
-                        </p>
+                    <div className="flex border border-main-300 rounded-lg p-0.5 bg-main-100 text-xs">
+                        <button
+                            onClick={() => setSidebarTab("prompts")}
+                            className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                                sidebarTab === "prompts" ? "bg-primary text-white" : "text-main-600 hover:text-main-900"
+                            }`}
+                        >
+                            Prompts
+                        </button>
+                        <button
+                            onClick={() => setSidebarTab("history")}
+                            className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
+                                sidebarTab === "history" ? "bg-primary text-white" : "text-main-600 hover:text-main-900"
+                            }`}
+                        >
+                            History ({sessions.length})
+                        </button>
                     </div>
                 </div>
 
-                {/* Prompt Categories */}
-                <div className="bg-main-200/60 border border-main-300 rounded-2xl p-4 space-y-4 shadow-sm flex-1 overflow-y-auto">
-                    <h4 className="font-bold text-sm text-main-900 flex items-center gap-2">
-                        <i className="bi bi-lightbulb text-amber-500" />
-                        Suggested Inquiries
-                    </h4>
+                {/* Tab: Suggested Inquiries */}
+                {sidebarTab === "prompts" && (
+                    <div className="bg-main-200/60 border border-main-300 rounded-2xl p-4 space-y-4 shadow-sm flex-1 overflow-y-auto max-h-[500px]">
+                        <h4 className="font-bold text-sm text-main-900 flex items-center gap-2">
+                            <i className="bi bi-lightbulb text-amber-500" />
+                            Suggested Inquiries
+                        </h4>
 
-                    {PROMPT_CATEGORIES.map((cat, cIdx) => (
-                        <div key={cIdx} className="space-y-1.5">
-                            <h5 className="text-xs font-semibold text-main-600 flex items-center gap-1.5 uppercase tracking-wider">
-                                <i className={`bi ${cat.icon} text-primary`} />
-                                {cat.title}
-                            </h5>
-                            <div className="space-y-1">
-                                {cat.prompts.map((p, pIdx) => (
-                                    <button
-                                        key={pIdx}
-                                        onClick={() => handleSendMessage(p)}
-                                        className="w-full text-left p-2 rounded-lg bg-main-100 hover:bg-primary/10 hover:text-primary hover:border-primary/40 border border-main-300 text-xs text-main-700 transition-all cursor-pointer leading-snug"
-                                    >
-                                        &quot;{p}&quot;
-                                    </button>
-                                ))}
+                        {PROMPT_CATEGORIES.map((cat, cIdx) => (
+                            <div key={cIdx} className="space-y-1.5">
+                                <h5 className="text-xs font-semibold text-main-600 flex items-center gap-1.5 uppercase tracking-wider">
+                                    <i className={`bi ${cat.icon} text-primary`} />
+                                    {cat.title}
+                                </h5>
+                                <div className="space-y-1">
+                                    {cat.prompts.map((p, pIdx) => (
+                                        <button
+                                            key={pIdx}
+                                            onClick={() => handleSend(p)}
+                                            className="w-full text-left p-2 rounded-lg bg-main-100 hover:bg-primary/10 hover:text-primary hover:border-primary/40 border border-main-300 text-xs text-main-700 transition-all cursor-pointer leading-snug"
+                                        >
+                                            &quot;{p}&quot;
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Tab: Chat History / Sessions */}
+                {sidebarTab === "history" && (
+                    <div className="bg-main-200/60 border border-main-300 rounded-2xl p-4 space-y-3 shadow-sm flex-1 overflow-y-auto max-h-[500px]">
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-sm text-main-900 flex items-center gap-2">
+                                <i className="bi bi-clock-history text-primary" />
+                                Saved Threads
+                            </h4>
+                            <button
+                                onClick={createNewSession}
+                                className="text-xs text-primary font-semibold hover:underline cursor-pointer"
+                            >
+                                + New Thread
+                            </button>
                         </div>
-                    ))}
-                </div>
+
+                        <div className="space-y-1.5">
+                            {sessions.map(s => {
+                                const isActive = s.id === activeSessionId;
+                                return (
+                                    <div
+                                        key={s.id}
+                                        onClick={() => switchSession(s.id)}
+                                        className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 text-xs transition-all cursor-pointer ${
+                                            isActive
+                                                ? "bg-primary/10 border-primary text-primary font-semibold shadow-xs"
+                                                : "bg-main-100 border-main-300 text-main-700 hover:bg-main-200/70"
+                                        }`}
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p className="truncate">{s.title || "Conversation"}</p>
+                                            <p className="text-[10px] text-main-400 font-normal">
+                                                {s.messages.length} messages • {new Date(s.updatedAt).toLocaleDateString()}
+                                            </p>
+                                        </div>
+
+                                        {sessions.length > 1 && (
+                                            <button
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    deleteSession(s.id);
+                                                }}
+                                                className="text-main-400 hover:text-danger p-1 rounded transition-colors cursor-pointer"
+                                                title="Delete thread"
+                                            >
+                                                <i className="bi bi-trash text-xs" />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
