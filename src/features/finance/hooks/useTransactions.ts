@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { TransactionService } from "../services/TransactionService";
-import type { Transaction, TransactionDTO } from "../services/TransactionService";
+import type { Transaction, TransactionDTO, TransferDTO } from "../services/TransactionService";
 import { Toast } from "../../../components/ui/Toast";
 import { syncManager } from "../../../lib/offline/syncManager";
 
@@ -41,6 +41,28 @@ export function useTransactions() {
         }
     };
 
+    const createTransfer = async (payload: TransferDTO) => {
+        try {
+            await TransactionService.createTransfer(payload);
+            Toast.fire({ icon: "success", title: "Transfer recorded" });
+            load();
+        } catch (error) {
+            Toast.fire({ icon: "error", title: error instanceof Error ? error.message : "Transfer failed" });
+            throw error;
+        }
+    };
+
+    const updateTransfer = async (transferId: string, payload: TransferDTO) => {
+        try {
+            await TransactionService.updateTransfer(transferId, payload);
+            Toast.fire({ icon: "success", title: "Transfer updated" });
+            load();
+        } catch (error) {
+            Toast.fire({ icon: "error", title: error instanceof Error ? error.message : "Transfer update failed" });
+            throw error;
+        }
+    };
+
     const remove = async (id: string) => {
         try {
             await TransactionService.remove(id);
@@ -48,6 +70,17 @@ export function useTransactions() {
             load();
         } catch {
             Toast.fire({ icon: "error", title: "Delete failed" });
+        }
+    };
+
+    const removeTransfer = async (transferId: string) => {
+        try {
+            await TransactionService.removeTransfer(transferId);
+            Toast.fire({ icon: "success", title: "Transfer removed" });
+            load();
+        } catch (error) {
+            Toast.fire({ icon: "error", title: error instanceof Error ? error.message : "Transfer delete failed" });
+            throw error;
         }
     };
 
@@ -69,7 +102,10 @@ export function useTransactions() {
         error,
         reload: load,
         create,
+        createTransfer,
         update,
+        updateTransfer,
         remove,
+        removeTransfer,
     };
 }

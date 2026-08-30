@@ -127,6 +127,7 @@ export interface Database {
                     dc: "dr" | "cr";
                     account: string;
                     party_id?: string | null;
+                    transfer_id?: string | null;
                     currency: CurrencyCode;
                     notes: string;
                     category: string;
@@ -143,6 +144,7 @@ export interface Database {
                     dc?: "dr" | "cr";
                     account: string;
                     party_id?: string | null;
+                    transfer_id?: string | null;
                     currency?: CurrencyCode;
                     notes?: string;
                     category?: string;
@@ -159,6 +161,7 @@ export interface Database {
                     dc?: "dr" | "cr";
                     account?: string;
                     party_id?: string | null;
+                    transfer_id?: string | null;
                     currency?: CurrencyCode;
                     notes?: string;
                     category?: string;

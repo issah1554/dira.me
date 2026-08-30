@@ -43,14 +43,20 @@ export default function LedgerPage() {
         data: transactions,
         loading,
         create: createTransaction,
+        createTransfer,
         update: updateTransaction,
+        updateTransfer,
         remove: removeTransaction,
+        removeTransfer,
     } = useTransactions();
     const { accounts, loadAccounts } = useAccounts();
     const { parties } = useParties();
 
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingTransferId, setEditingTransferId] = useState<string | null>(null);
+    const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
+    const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
     // Minimal Filter State
     const [searchQuery, setSearchQuery] = useState("");
@@ -68,6 +74,7 @@ export default function LedgerPage() {
         type: "expense" as TransactionType,
         amount: "",
         account: "",
+        toAccount: "",
         party_id: "" as string | null,
         category: "General",
         notes: "",
@@ -76,12 +83,14 @@ export default function LedgerPage() {
     const closeModal = () => {
         setOpen(false);
         setEditingId(null);
+        setEditingTransferId(null);
         setFormData({
             date: new Date().toISOString().split("T")[0],
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
             account: accounts.length > 0 ? accounts[0].name : "",
+            toAccount: "",
             party_id: null,
             category: "General",
             notes: "",
@@ -90,12 +99,14 @@ export default function LedgerPage() {
 
     const handleOpenAdd = () => {
         setEditingId(null);
+        setEditingTransferId(null);
         setFormData({
             date: new Date().toISOString().split("T")[0],
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
             account: accounts.length > 0 ? accounts[0].name : "",
+            toAccount: "",
             party_id: null,
             category: "General",
             notes: "",
@@ -105,6 +116,7 @@ export default function LedgerPage() {
 
     const handleOpenEdit = (tx: Transaction) => {
         setEditingId(tx.id);
+        setEditingTransferId(tx.transferId || null);
         let dateVal = new Date().toISOString().split("T")[0];
         let timeVal = getCurrentTimeStr();
 
@@ -121,13 +133,19 @@ export default function LedgerPage() {
         }
 
         const type = (tx.type as TransactionType) || (tx.dc === "cr" ? "income" : "expense");
+        const transferPair = tx.transferId
+            ? transactions.filter(item => item.transferId === tx.transferId)
+            : [];
+        const transferFrom = transferPair.find(item => item.dc === "dr");
+        const transferTo = transferPair.find(item => item.dc === "cr");
 
         setFormData({
             date: dateVal,
             time: timeVal,
             type,
             amount: String(tx.amount),
-            account: tx.account,
+            account: transferFrom?.account || tx.account,
+            toAccount: transferTo?.account || "",
             party_id: tx.party_id || null,
             category: tx.category || "General",
             notes: tx.notes || "",
@@ -150,6 +168,32 @@ export default function LedgerPage() {
         const selectedAccount = accounts.find(a => a.name === formData.account);
         const currency = selectedAccount?.currency || "TZS";
 
+        if (formData.type === "transfer") {
+            const destinationAccount = accounts.find(a => a.name === formData.toAccount);
+            if (!destinationAccount) {
+                Toast.fire({ icon: "error", title: "Please select a destination account" });
+                return;
+            }
+            if (formData.account === formData.toAccount) {
+                Toast.fire({ icon: "error", title: "From and To accounts must be different" });
+                return;
+            }
+            if (currency !== destinationAccount.currency) {
+                Toast.fire({ icon: "error", title: "Transfers between different currencies are not supported yet" });
+                return;
+            }
+
+            const originalDebit = editingTransferId
+                ? transactions.find(tx => tx.transferId === editingTransferId && tx.dc === "dr")
+                : undefined;
+            const available = (selectedAccount?.currentBalance || 0)
+                + (originalDebit?.account === formData.account ? originalDebit.amount : 0);
+            if (amt > available) {
+                Toast.fire({ icon: "error", title: "Transfer amount exceeds the available balance" });
+                return;
+            }
+        }
+
         let fullIsoDate = new Date().toISOString();
         if (formData.date) {
             const timeVal = formData.time || "00:00";
@@ -159,6 +203,28 @@ export default function LedgerPage() {
             } else {
                 fullIsoDate = new Date(formData.date).toISOString();
             }
+        }
+
+        if (formData.type === "transfer") {
+            const transferPayload = {
+                date: fullIsoDate,
+                amount: amt,
+                fromAccount: formData.account,
+                toAccount: formData.toAccount,
+                currency,
+                category: formData.category || "Transfer",
+                notes: formData.notes,
+                status: "completed" as const,
+            };
+
+            if (editingTransferId) {
+                await updateTransfer(editingTransferId, transferPayload);
+            } else {
+                await createTransfer(transferPayload);
+            }
+            loadAccounts();
+            closeModal();
+            return;
         }
 
         const dc = transactionTypeConfig[formData.type].dc;
@@ -187,11 +253,24 @@ export default function LedgerPage() {
         closeModal();
     };
 
-    const handleRemove = async (id: string) => {
-        if (window.confirm("Are you sure you want to remove this ledger transaction?")) {
-            await removeTransaction(id);
-            loadAccounts();
-        }
+    const handleOpenView = (tx: Transaction) => {
+        setViewingTransaction(tx);
+        setDeleteConfirmation("");
+    };
+
+    const closeViewModal = () => {
+        setViewingTransaction(null);
+        setDeleteConfirmation("");
+    };
+
+    const handleRemove = async () => {
+        if (!viewingTransaction || deleteConfirmation !== "DELETE") return;
+        const tx = viewingTransaction;
+        const isLinkedTransfer = tx.type === "transfer" && tx.transferId;
+        if (isLinkedTransfer) await removeTransfer(tx.transferId!);
+        else await removeTransaction(tx.id);
+        closeViewModal();
+        loadAccounts();
     };
 
     // Active filters count
@@ -454,12 +533,12 @@ export default function LedgerPage() {
                     </Button>
                     <Button
                         size="xs"
-                        color="error"
+                        color="neutral"
                         variant="outline"
-                        onClick={() => handleRemove(row.id)}
-                        title="Remove transaction"
+                        onClick={() => handleOpenView(row)}
+                        title="View transaction details"
                     >
-                        <i className="bi bi-trash mr-1" /> Remove
+                        <i className="bi bi-eye mr-1" /> View
                     </Button>
                 </div>
             ),
@@ -708,18 +787,138 @@ export default function LedgerPage() {
                     </div>
                     <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 min-w-0">
                         <p className="text-[11px] text-emerald-700">Cash In</p>
-                        <div className="text-sm font-bold text-emerald-700 break-words">{renderSummaryAmounts("cashIn")}</div>
+                        <div className="text-sm font-bold text-emerald-700 wrap-break-word">{renderSummaryAmounts("cashIn")}</div>
                     </div>
                     <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 min-w-0">
                         <p className="text-[11px] text-rose-700">Cash Out</p>
-                        <div className="text-sm font-bold text-rose-700 break-words">{renderSummaryAmounts("cashOut")}</div>
+                        <div className="text-sm font-bold text-rose-700 wrap-break-word">{renderSummaryAmounts("cashOut")}</div>
                     </div>
                     <div className="rounded-lg border border-primary-300 bg-primary-100 px-3 py-2 min-w-0">
                         <p className="text-[11px] text-primary-700">Net</p>
-                        <div className="text-sm font-bold text-primary-700 break-words">{renderSummaryAmounts("net")}</div>
+                        <div className="text-sm font-bold text-primary-700 wrap-break-word">{renderSummaryAmounts("net")}</div>
                     </div>
                 </div>
             </section>
+
+            {/* Transaction Details Modal */}
+            <Modal open={Boolean(viewingTransaction)} onClose={closeViewModal} size="md" position="center" blur closeOnBackdrop closeOnEsc>
+                <ModalHeader
+                    title="Transaction Details"
+                    icon="bi-receipt"
+                    onClose={closeViewModal}
+                />
+
+                {viewingTransaction && (() => {
+                    const typeKey = viewingTransaction.type || (viewingTransaction.dc === "cr" ? "income" : "expense");
+                    const config = transactionTypeConfig[typeKey];
+                    const transferRows = viewingTransaction.transferId
+                        ? transactions.filter(tx => tx.transferId === viewingTransaction.transferId)
+                        : [];
+                    const fromAccount = transferRows.find(tx => tx.dc === "dr")?.account;
+                    const toAccount = transferRows.find(tx => tx.dc === "cr")?.account;
+                    const party = parties.find(item => item.id === viewingTransaction.party_id);
+                    const date = new Date(viewingTransaction.date);
+                    const amount = viewingTransaction.currency === "USD"
+                        ? `$ ${viewingTransaction.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `${viewingTransaction.amount.toLocaleString()} TZS`;
+
+                    return (
+                        <>
+                            <ModalBody>
+                                <div className="flex items-center gap-3 rounded-lg border border-main-300 bg-main-200/60 p-4">
+                                    <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${config.badge}`}>
+                                        <i className={`bi ${config.icon} text-lg`} />
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="font-semibold text-lg">{config.label}</h4>
+                                        <p className="text-sm text-main-500">{amount}</p>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded text-xs font-semibold capitalize bg-green-100 text-green-700">
+                                        {viewingTransaction.status}
+                                    </span>
+                                </div>
+
+                                <dl className="divide-y divide-main-300 rounded-lg border border-main-300">
+                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                        <dt className="text-sm text-main-500">Date & Time</dt>
+                                        <dd className="text-sm font-medium text-main-800 text-right">
+                                            {isNaN(date.getTime()) ? viewingTransaction.date : date.toLocaleString()}
+                                        </dd>
+                                    </div>
+                                    {viewingTransaction.transferId ? (
+                                        <>
+                                            <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                                <dt className="text-sm text-main-500">From Account</dt>
+                                                <dd className="text-sm font-medium text-main-800">{fromAccount || "Unknown"}</dd>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                                <dt className="text-sm text-main-500">To Account</dt>
+                                                <dd className="text-sm font-medium text-main-800">{toAccount || "Unknown"}</dd>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                            <dt className="text-sm text-main-500">Account</dt>
+                                            <dd className="text-sm font-medium text-main-800">{viewingTransaction.account}</dd>
+                                        </div>
+                                    )}
+                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                        <dt className="text-sm text-main-500">Party / Counterparty</dt>
+                                        <dd className="text-sm font-medium text-main-800">{party?.name || "None"}</dd>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                        <dt className="text-sm text-main-500">Category</dt>
+                                        <dd className="text-sm font-medium text-main-800">{viewingTransaction.category || "—"}</dd>
+                                    </div>
+                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                        <dt className="text-sm text-main-500">Notes</dt>
+                                        <dd className="text-sm font-medium text-main-800 text-right wrap-break-word max-w-2/3">{viewingTransaction.notes || "—"}</dd>
+                                    </div>
+                                </dl>
+
+                                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                    <div className="flex items-start gap-2 mb-3">
+                                        <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
+                                        <div>
+                                            <h5 className="font-semibold text-red-800">
+                                                {viewingTransaction.transferId ? "Delete transfer" : "Delete transaction"}
+                                            </h5>
+                                            <p className="text-xs text-red-700">
+                                                {viewingTransaction.transferId
+                                                    ? "Both linked transfer entries will be permanently deleted. "
+                                                    : "This transaction will be permanently deleted. "}
+                                                Type <strong>DELETE</strong> to continue.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <input
+                                        className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        value={deleteConfirmation}
+                                        onChange={e => setDeleteConfirmation(e.target.value)}
+                                        placeholder="DELETE"
+                                        autoComplete="off"
+                                    />
+                                    <Button
+                                        color="error"
+                                        size="sm"
+                                        className="mt-3 w-full"
+                                        onClick={handleRemove}
+                                        disabled={loading || deleteConfirmation !== "DELETE"}
+                                    >
+                                        {loading ? <i className="bi bi-arrow-clockwise animate-spin" /> : <i className="bi bi-trash" />}
+                                        {viewingTransaction.transferId ? "Delete Transfer" : "Delete Transaction"}
+                                    </Button>
+                                </div>
+                            </ModalBody>
+                            <ModalFooter>
+                                <Button color="neutral" size="sm" variant="outline" onClick={closeViewModal} disabled={loading}>
+                                    Close
+                                </Button>
+                            </ModalFooter>
+                        </>
+                    );
+                })()}
+            </Modal>
 
             {/* Add / Edit Ledger Entry Modal */}
             <Modal open={open} onClose={closeModal} size="md" position="center" blur>
@@ -764,15 +963,21 @@ export default function LedgerPage() {
                                 {transactionTypes.map(t => {
                                     const cfg = transactionTypeConfig[t.value];
                                     const isSelected = formData.type === t.value;
+                                    const changesTransferKind = Boolean(editingId) && (
+                                        editingTransferId
+                                            ? t.value !== "transfer"
+                                            : formData.type !== "transfer" && t.value === "transfer"
+                                    );
                                     return (
                                         <button
                                             key={t.value}
                                             type="button"
                                             onClick={() => setFormData(p => ({ ...p, type: t.value }))}
+                                            disabled={changesTransferKind}
                                             className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                                                 isSelected
                                                     ? `${cfg.badge} ring-2 ring-primary/40 shadow-sm font-semibold`
-                                                    : "border-main-300 bg-main-100 text-main-600 hover:bg-main-200"
+                                                    : "border-main-300 bg-main-100 text-main-600 hover:bg-main-200 disabled:opacity-40 disabled:cursor-not-allowed"
                                             }`}
                                         >
                                             <i className={`bi ${cfg.icon} text-base mb-1 ${isSelected ? cfg.color : "text-main-500"}`} />
@@ -798,7 +1003,7 @@ export default function LedgerPage() {
                         />
 
                         {/* Party / Counterparty Selection */}
-                        <div>
+                        {formData.type !== "transfer" && <div>
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-sm font-medium text-main">
                                     Party / Counterparty <span className="text-xs text-main-500 font-normal">(Optional)</span>
@@ -822,7 +1027,7 @@ export default function LedgerPage() {
                                     </option>
                                 ))}
                             </select>
-                        </div>
+                        </div>}
 
                         <TextInput
                             label="Category"
@@ -847,7 +1052,7 @@ export default function LedgerPage() {
                         {/* Account Selection */}
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
-                                Associated Account <span className="text-red-500">*</span>
+                                {formData.type === "transfer" ? "From Account" : "Associated Account"} <span className="text-red-500">*</span>
                             </label>
                             {accounts.length > 0 ? (
                                 <select
@@ -881,6 +1086,32 @@ export default function LedgerPage() {
                                 </div>
                             )}
                         </div>
+
+                        {formData.type === "transfer" && (
+                            <div>
+                                <label className="block text-sm font-medium text-main mb-1">
+                                    To Account <span className="text-red-500">*</span>
+                                </label>
+                                <select
+                                    className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                                    value={formData.toAccount}
+                                    onChange={e => setFormData(p => ({ ...p, toAccount: e.target.value }))}
+                                    required
+                                >
+                                    <option value="">-- Choose Destination Account --</option>
+                                    {accounts
+                                        .filter(acc => acc.name !== formData.account)
+                                        .map(acc => (
+                                            <option key={acc.id} value={acc.name}>
+                                                {acc.name} ({acc.type}) — Current Balance: {acc.balance}
+                                            </option>
+                                        ))}
+                                </select>
+                                <p className="text-[11px] text-main-500 mt-1">
+                                    Both accounts must use the same currency. The transfer will create linked debit and credit entries.
+                                </p>
+                            </div>
+                        )}
                     </ModalBody>
 
                     <ModalFooter>

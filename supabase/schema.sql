@@ -143,6 +143,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     dc TEXT NOT NULL CHECK (dc IN ('dr', 'cr')),
     account TEXT NOT NULL,
     party_id UUID REFERENCES public.parties(id) ON DELETE SET NULL,
+    transfer_id UUID,
     currency TEXT NOT NULL DEFAULT 'TZS' CHECK (currency IN ('TZS', 'USD')),
     notes TEXT DEFAULT '',
     category TEXT DEFAULT '',
@@ -161,6 +162,7 @@ CREATE TRIGGER set_transactions_updated_at
 -- Indexes for transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_party_id ON public.transactions(party_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_transfer_id ON public.transactions(transfer_id) WHERE transfer_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category);

@@ -91,10 +91,16 @@ export type TransactionDTO = {
     status: "completed" | "pending" | "failed";
 };
 
+export type TransferDTO = Omit<TransactionDTO, "type" | "dc" | "account" | "party_id"> & {
+    fromAccount: string;
+    toAccount: string;
+};
+
 export type Transaction = TransactionDTO & {
     id: string;
     dc: "dr" | "cr";
     userId?: string;
+    transferId?: string | null;
 };
 
 const rowToTransaction = (row: TransactionRow): Transaction => {
@@ -119,6 +125,7 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         dc,
         account: row.account || "",
         party_id: row.party_id || null,
+        transferId: row.transfer_id || null,
         currency: (row.currency as CurrencyCode) || "TZS",
         notes: row.notes || "",
         category: row.category || "",
@@ -222,6 +229,141 @@ export const TransactionService = {
             }
 
             return rowToTransaction(newRow);
+        });
+    },
+
+    async createTransfer(payload: TransferDTO): Promise<Transaction[]> {
+        return await syncManager.onUserMutation(async () => {
+            const user = (await supabase.auth.getUser()).data.user;
+            if (!user) throw new Error("User not authenticated");
+            if (payload.fromAccount === payload.toAccount) throw new Error("Transfer accounts must be different");
+
+            const now = new Date().toISOString();
+            const transferId = crypto.randomUUID();
+            const date = payload.date ? new Date(payload.date).toISOString() : now;
+            const base = {
+                user_id: user.id,
+                date,
+                amount: payload.amount,
+                type: "transfer" as const,
+                party_id: null,
+                transfer_id: transferId,
+                currency: payload.currency || "TZS",
+                notes: payload.notes || "",
+                category: payload.category || "Transfer",
+                status: payload.status || "completed",
+                created_at: now,
+                updated_at: now,
+            };
+            const rows: TransactionRow[] = [
+                { ...base, id: crypto.randomUUID(), dc: "dr", account: payload.fromAccount },
+                { ...base, id: crypto.randomUUID(), dc: "cr", account: payload.toAccount },
+            ];
+
+            await offlineDb.putMany("transactions", rows);
+
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { data, error } = await supabase.from("transactions").insert(rows).select();
+                    if (error) throw error;
+                    if (data) await offlineDb.putMany("transactions", data);
+                    return (data || rows).map(row => rowToTransaction(row as TransactionRow));
+                } catch (err) {
+                    console.warn("Online transfer creation failed, queueing:", err);
+                }
+            }
+
+            for (const row of rows) {
+                await offlineDb.addToSyncQueue({
+                    table: "transactions",
+                    action: "insert",
+                    recordId: row.id,
+                    payload: row,
+                    userId: user.id,
+                });
+            }
+            return rows.map(rowToTransaction);
+        });
+    },
+
+    async updateTransfer(transferId: string, payload: TransferDTO): Promise<void> {
+        return await syncManager.onUserMutation(async () => {
+            if (payload.fromAccount === payload.toAccount) throw new Error("Transfer accounts must be different");
+
+            let rows = (await offlineDb.getAll<TransactionRow>("transactions"))
+                .filter(row => row.transfer_id === transferId);
+
+            if (rows.length !== 2 && typeof navigator !== "undefined" && navigator.onLine) {
+                const { data, error } = await supabase.from("transactions").select("*").eq("transfer_id", transferId);
+                if (error) throw error;
+                rows = (data || []) as TransactionRow[];
+            }
+            if (rows.length !== 2) throw new Error("Linked transfer pair not found");
+
+            const now = new Date().toISOString();
+            const date = new Date(payload.date).toISOString();
+            const updatedRows = rows.map(row => ({
+                ...row,
+                date,
+                amount: payload.amount,
+                type: "transfer" as const,
+                dc: row.dc,
+                account: row.dc === "dr" ? payload.fromAccount : payload.toAccount,
+                currency: payload.currency || "TZS",
+                notes: payload.notes || "",
+                category: payload.category || "Transfer",
+                status: payload.status,
+                updated_at: now,
+            }));
+
+            await offlineDb.putMany("transactions", updatedRows);
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase.from("transactions").upsert(updatedRows, { onConflict: "id" });
+                    if (error) throw error;
+                    return;
+                } catch (err) {
+                    console.warn("Online transfer update failed, queueing:", err);
+                }
+            }
+
+            for (const row of updatedRows) {
+                await offlineDb.addToSyncQueue({
+                    table: "transactions",
+                    action: "update",
+                    recordId: row.id,
+                    payload: row,
+                    userId: row.user_id || "",
+                });
+            }
+        });
+    },
+
+    async removeTransfer(transferId: string): Promise<void> {
+        return await syncManager.onUserMutation(async () => {
+            const rows = (await offlineDb.getAll<TransactionRow>("transactions"))
+                .filter(row => row.transfer_id === transferId);
+            for (const row of rows) await offlineDb.deleteItem("transactions", row.id);
+
+            if (typeof navigator !== "undefined" && navigator.onLine) {
+                try {
+                    const { error } = await supabase.from("transactions").delete().eq("transfer_id", transferId);
+                    if (error) throw error;
+                    return;
+                } catch (err) {
+                    console.warn("Online transfer delete failed, queueing:", err);
+                }
+            }
+
+            for (const row of rows) {
+                await offlineDb.addToSyncQueue({
+                    table: "transactions",
+                    action: "delete",
+                    recordId: row.id,
+                    payload: {},
+                    userId: row.user_id || "",
+                });
+            }
         });
     },
 
