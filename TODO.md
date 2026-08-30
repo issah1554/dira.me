@@ -11,3 +11,4 @@
 - [ ] Add party display name
 - [x] Minimal filter design
 - [ ] Trash record instead of deleting them
+- [ ] Add transaction items functionality
