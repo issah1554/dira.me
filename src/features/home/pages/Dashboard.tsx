@@ -15,7 +15,7 @@ const quickActions = [
 
 export function Dashboard() {
     const { user } = useAuth();
-    const { summary, formatCurrency } = useAccounts();
+    const { accounts, summary, formatCurrency } = useAccounts();
     const { data: transactions } = useTransactions();
 
     const username = useMemo(() => {

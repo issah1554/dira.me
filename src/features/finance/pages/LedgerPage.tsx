@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import CollapsibleTable, { type Column } from "../../../components/ui/Table";
 import { Button } from "../../../components/ui/Buttons";
 import { Toast } from "../../../components/ui/Toast";
@@ -39,6 +39,9 @@ const transactionTypes: { value: TransactionType; label: string }[] = [
 ======================= */
 
 export default function LedgerPage() {
+    const [searchParams, setSearchParams] = useSearchParams();
+    const accountParam = searchParams.get("account") || searchParams.get("accountId") || "";
+
     const {
         data: transactions,
         loading,
@@ -60,13 +63,20 @@ export default function LedgerPage() {
 
     // Minimal Filter State
     const [searchQuery, setSearchQuery] = useState("");
-    const [showFilters, setShowFilters] = useState(false);
+    const [showFilters, setShowFilters] = useState(Boolean(accountParam));
     const [filterType, setFilterType] = useState<string>("");
-    const [filterAccount, setFilterAccount] = useState("");
+    const [filterAccount, setFilterAccount] = useState(accountParam);
     const [filterParty, setFilterParty] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
+
+    useEffect(() => {
+        if (accountParam) {
+            setFilterAccount(accountParam);
+            setShowFilters(true);
+        }
+    }, [accountParam]);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split("T")[0],
@@ -292,6 +302,9 @@ export default function LedgerPage() {
         setFilterStatus("");
         setFilterDateFrom("");
         setFilterDateTo("");
+        if (accountParam) {
+            setSearchParams({});
+        }
     };
 
     // Filter transactions
@@ -730,8 +743,14 @@ export default function LedgerPage() {
 
                     {filterAccount && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
-                            Account: {filterAccount}
-                            <button onClick={() => setFilterAccount("")} className="hover:text-danger ml-0.5">
+                            Account: {accounts.find(a => a.id === filterAccount)?.name || filterAccount}
+                            <button
+                                onClick={() => {
+                                    setFilterAccount("");
+                                    if (accountParam) setSearchParams({});
+                                }}
+                                className="hover:text-danger ml-0.5 cursor-pointer"
+                            >
                                 <i className="bi bi-x" />
                             </button>
                         </span>

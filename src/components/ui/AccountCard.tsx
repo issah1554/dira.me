@@ -14,6 +14,7 @@ export interface AccountCardProps {
     // optional handlers
     onEdit?: () => void;
     onDelete?: () => void;
+    onViewTransactions?: () => void;
 }
 
 const statusColors: Record<string, string> = {
@@ -32,7 +33,8 @@ export const AccountCard: React.FC<AccountCardProps> = ({
     currency,
     className = "",
     onEdit,
-    onDelete
+    onDelete,
+    onViewTransactions,
 }) => {
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -46,33 +48,48 @@ export const AccountCard: React.FC<AccountCardProps> = ({
             {/* Ellipsis Menu Button */}
             <div className="absolute top-4 right-4">
                 <button
-                    className="p-1 rounded-full w-8 h-8 hover:bg-main-100 transition"
+                    className="p-1 rounded-full w-8 h-8 hover:bg-main-100 transition cursor-pointer"
                     onClick={() => setMenuOpen(v => !v)}
+                    aria-label="Account options"
                 >
                     <span className="bi bi-three-dots"></span>
                 </button>
 
                 {menuOpen && (
-                    <div className="absolute right-0 mt-2 w-32 bg-main-100 shadow-md rounded-lg border border-main-300 z-20 py-3">
-                        <button
-                            onClick={() => {
-                                setMenuOpen(false);
-                                onEdit?.();
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-main-300/40 text-sm"
-                        >
-                            Edit
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                setMenuOpen(false);
-                                onDelete?.();
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-main-300/40 text-sm text-red-600"
-                        >
-                            Delete
-                        </button>
+                    <div className="absolute right-0 mt-2 w-36 bg-main-100 shadow-md rounded-lg border border-main-300 z-20 py-2">
+                        {onViewTransactions && (
+                            <button
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    onViewTransactions();
+                                }}
+                                className="w-full text-left px-3 py-1.5 hover:bg-main-300/40 text-sm flex items-center gap-2 cursor-pointer"
+                            >
+                                <i className="bi bi-journal-text text-primary" /> Transactions
+                            </button>
+                        )}
+                        {onEdit && (
+                            <button
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    onEdit();
+                                }}
+                                className="w-full text-left px-3 py-1.5 hover:bg-main-300/40 text-sm flex items-center gap-2 cursor-pointer"
+                            >
+                                <i className="bi bi-pencil" /> Edit
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    onDelete();
+                                }}
+                                className="w-full text-left px-3 py-1.5 hover:bg-main-300/40 text-sm text-red-600 flex items-center gap-2 cursor-pointer"
+                            >
+                                <i className="bi bi-trash" /> Delete
+                            </button>
+                        )}
                     </div>
                 )}
             </div>

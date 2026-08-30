@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "../../../components/ui/Buttons";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/ui/Modal";
 import { TextInput } from "../../../components/ui/TextInput";
@@ -280,6 +281,14 @@ export default function Accounts() {
                         </div>
 
                         <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-main-300 transition-opacity md:opacity-0 md:pointer-events-none md:group-hover:opacity-100 md:group-hover:pointer-events-auto md:group-focus-within:opacity-100 md:group-focus-within:pointer-events-auto">
+                            <Link
+                                to={`/finance/ledger?account=${account.id}`}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded border border-main-300 text-main-600 hover:text-primary hover:border-primary transition-colors text-xs"
+                                aria-label={`View transactions for ${account.name}`}
+                                title="View transactions"
+                            >
+                                <i className="bi bi-journal-text" aria-hidden="true" />
+                            </Link>
                             <Button
                                 color="primary"
                                 size="xs"
@@ -486,34 +495,59 @@ export default function Accounts() {
                                 ))}
                             </dl>
 
-                            <div className="rounded-lg border border-red-300 bg-red-50 p-4">
-                                <div className="flex items-start gap-2 mb-3">
-                                    <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
-                                    <div>
-                                        <h5 className="font-semibold text-red-800">Delete account</h5>
-                                        <p className="text-xs text-red-700">
-                                            Type <strong>{viewAccount.name}</strong> to enable deletion. This action cannot be undone.
-                                        </p>
+                            <Link
+                                to={`/finance/ledger?account=${viewAccount.id}`}
+                                className="inline-flex items-center justify-center gap-2 w-full px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <i className="bi bi-journal-text" /> View Account Transactions ({viewAccount.transactionCount})
+                            </Link>
+
+                            {viewAccount.transactionCount > 0 ? (
+                                <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                                    <div className="flex items-start gap-2.5">
+                                        <i className="bi bi-shield-lock-fill text-amber-600 mt-0.5 text-base" />
+                                        <div>
+                                            <h5 className="font-semibold text-amber-900 text-sm">Cannot Delete Account</h5>
+                                            <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                                                This account is linked to <strong>{viewAccount.transactionCount}</strong> recorded transaction(s).
+                                                To maintain audit history and database referential integrity, accounts with transaction history cannot be deleted.
+                                            </p>
+                                            <p className="text-xs text-amber-700 mt-1.5 font-medium">
+                                                Tip: You can edit this account to set its status to <strong>Inactive</strong>.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
-                                <input
-                                    className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
-                                    value={deleteConfirmation}
-                                    onChange={e => setDeleteConfirmation(e.target.value)}
-                                    placeholder={viewAccount.name}
-                                    autoComplete="off"
-                                />
-                                <Button
-                                    color="error"
-                                    size="sm"
-                                    className="mt-3 w-full"
-                                    onClick={handleDeleteAccount}
-                                    disabled={loading || deleteConfirmation !== viewAccount.name}
-                                >
-                                    {loading ? <i className="bi bi-arrow-clockwise animate-spin mr-2" /> : <i className="bi bi-trash mr-2" />}
-                                    Delete Account
-                                </Button>
-                            </div>
+                            ) : (
+                                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                    <div className="flex items-start gap-2 mb-3">
+                                        <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
+                                        <div>
+                                            <h5 className="font-semibold text-red-800">Delete account</h5>
+                                            <p className="text-xs text-red-700">
+                                                Type <strong>{viewAccount.name}</strong> to enable deletion. This action cannot be undone.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <input
+                                        className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        value={deleteConfirmation}
+                                        onChange={e => setDeleteConfirmation(e.target.value)}
+                                        placeholder={viewAccount.name}
+                                        autoComplete="off"
+                                    />
+                                    <Button
+                                        color="error"
+                                        size="sm"
+                                        className="mt-3 w-full"
+                                        onClick={handleDeleteAccount}
+                                        disabled={loading || deleteConfirmation !== viewAccount.name}
+                                    >
+                                        {loading ? <i className="bi bi-arrow-clockwise animate-spin mr-2" /> : <i className="bi bi-trash mr-2" />}
+                                        Delete Account
+                                    </Button>
+                                </div>
+                            )}
                         </ModalBody>
 
                         <ModalFooter>

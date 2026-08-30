@@ -1,15 +1,20 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AccountCard } from "../../../components/ui/AccountCard";
 import { useAccounts } from "../hooks/useAccounts";
 import Loader from "../../../components/ui/Loaders";
 
 export const AccountsGridPage: React.FC = () => {
     const { accounts, loading, deleteAccount } = useAccounts();
+    const navigate = useNavigate();
 
-    const handleDelete = async (id: string, name: string) => {
-        if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-            await deleteAccount(id);
+    const handleDelete = async (acc: (typeof accounts)[0]) => {
+        if (acc.transactionCount > 0) {
+            alert(`"${acc.name}" has ${acc.transactionCount} linked transaction(s) and cannot be deleted due to referential integrity rules. You can set the account status to inactive instead.`);
+            return;
+        }
+        if (window.confirm(`Are you sure you want to delete "${acc.name}"?`)) {
+            await deleteAccount(acc.id);
         }
     };
 
@@ -81,7 +86,8 @@ export const AccountsGridPage: React.FC = () => {
                                         balance={acc.currentBalance}
                                         currency={acc.currency || "TZS"}
                                         className="h-full"
-                                        onDelete={() => handleDelete(acc.id, acc.name)}
+                                        onViewTransactions={() => navigate(`/finance/ledger?account=${acc.id}`)}
+                                        onDelete={() => handleDelete(acc)}
                                     />
                                 </div>
                             </div>
