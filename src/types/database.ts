@@ -67,7 +67,7 @@ export interface Database {
                 };
                 Update: {
                     id?: string;
-                    user_id: string;
+                    user_id?: string;
                     name?: string;
                     type?: string;
                     currency?: CurrencyCode;
@@ -107,7 +107,7 @@ export interface Database {
                 };
                 Update: {
                     id?: string;
-                    user_id: string;
+                    user_id?: string;
                     name?: string;
                     type?: PartyType;
                     phone?: string;
