@@ -109,6 +109,7 @@ export function Sidebar() {
                                 subItems: [
                                     { label: "Transactions", to: "/finance/ledger", icon: <i className="bi bi-journal-text" /> },
                                     { label: "Parties", to: "/finance/parties", icon: <i className="bi bi-people" /> },
+                                    { label: "Categories", to: "/finance/categories", icon: <i className="bi bi-tags" /> },
                                     { label: "Accounts", to: "/finance/accounts", icon: <i className="bi bi-bank" /> },
                                     { label: "Budgets", to: "/finance/budgets", icon: <i className="bi bi-piggy-bank" /> },
                                 ],

@@ -1,7 +1,7 @@
 // src/lib/offline/offlineDb.ts
 
 export type SyncAction = "insert" | "update" | "delete";
-export type SyncTable = "accounts" | "transactions" | "parties";
+export type SyncTable = "accounts" | "transactions" | "parties" | "categories" | "transaction_types";
 
 export interface SyncQueueItem {
     id: string; // unique queue item ID (UUID)
@@ -16,7 +16,7 @@ export interface SyncQueueItem {
 }
 
 const DB_NAME = "dira_me_offline_db";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
@@ -42,6 +42,12 @@ function openDB(): Promise<IDBDatabase> {
             }
             if (!db.objectStoreNames.contains("parties")) {
                 db.createObjectStore("parties", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("categories")) {
+                db.createObjectStore("categories", { keyPath: "id" });
+            }
+            if (!db.objectStoreNames.contains("transaction_types")) {
+                db.createObjectStore("transaction_types", { keyPath: "id" });
             }
             if (!db.objectStoreNames.contains("sync_queue")) {
                 const queueStore = db.createObjectStore("sync_queue", { keyPath: "id" });

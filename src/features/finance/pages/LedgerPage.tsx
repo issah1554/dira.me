@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import CollapsibleTable, { type Column } from "../../../components/ui/Table";
 import { Button } from "../../../components/ui/Buttons";
 import { Toast } from "../../../components/ui/Toast";
@@ -7,10 +7,14 @@ import { Modal, ModalHeader, ModalBody, ModalFooter } from "../../../components/
 import { TextInput } from "../../../components/ui/TextInput";
 import { DatePicker } from "../../../components/ui/DatePicker";
 import { TimePicker } from "../../../components/ui/TimePicker";
+import { SearchableSelect, type SearchableOption } from "../../../components/ui/SearchableSelect";
 import { useTransactions } from "../hooks/useTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { useParties } from "../hooks/useParties";
+import { useCategories } from "../hooks/useCategories";
+import { useTransactionTypes } from "../hooks/useTransactionTypes";
 import { partyTypeIcons, partyTypeColors } from "../services/partyService";
+import { categoryColorStyles } from "../services/categoryService";
 import { transactionTypeConfig, type Transaction } from "../services/TransactionService";
 import type { TransactionType } from "../../../types/database";
 import Loader from "../../../components/ui/Loaders";
@@ -39,6 +43,7 @@ const transactionTypes: { value: TransactionType; label: string }[] = [
 ======================= */
 
 export default function LedgerPage() {
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const accountParam = searchParams.get("account") || searchParams.get("accountId") || "";
 
@@ -54,6 +59,8 @@ export default function LedgerPage() {
     } = useTransactions();
     const { accounts, loadAccounts } = useAccounts();
     const { parties } = useParties();
+    const { categories } = useCategories();
+    const { types: dynamicTypes, typeConfigMap } = useTransactionTypes();
 
     const [open, setOpen] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -61,12 +68,42 @@ export default function LedgerPage() {
     const [viewingTransaction, setViewingTransaction] = useState<Transaction | null>(null);
     const [deleteConfirmation, setDeleteConfirmation] = useState("");
 
+    // Category options for searchable select
+    const categoryOptions: SearchableOption[] = useMemo(() => {
+        return categories.map(c => ({
+            value: c.name,
+            label: c.name,
+            subtext: c.description || undefined,
+            icon: c.icon || "bi-tag",
+            badge: c.color,
+            badgeClass: categoryColorStyles[c.color || "primary"]?.badge,
+        }));
+    }, [categories]);
+
+    // Party options for searchable select
+    const partyOptions: SearchableOption[] = useMemo(() => {
+        return parties.map(p => {
+            const colors = partyTypeColors[p.type] || partyTypeColors.other;
+            const icon = partyTypeIcons[p.type] || "bi-person";
+            const sub = [p.phone, p.email, p.notes].filter(Boolean).join(" • ");
+            return {
+                value: p.id,
+                label: p.name,
+                subtext: sub || undefined,
+                badge: p.type,
+                badgeClass: colors.badge,
+                icon,
+            };
+        });
+    }, [parties]);
+
     // Minimal Filter State
     const [searchQuery, setSearchQuery] = useState("");
     const [showFilters, setShowFilters] = useState(Boolean(accountParam));
     const [filterType, setFilterType] = useState<string>("");
     const [filterAccount, setFilterAccount] = useState(accountParam);
     const [filterParty, setFilterParty] = useState("");
+    const [filterCategory, setFilterCategory] = useState("");
     const [filterStatus, setFilterStatus] = useState("");
     const [filterDateFrom, setFilterDateFrom] = useState("");
     const [filterDateTo, setFilterDateTo] = useState("");
@@ -289,16 +326,18 @@ export default function LedgerPage() {
         if (filterType) count++;
         if (filterAccount) count++;
         if (filterParty) count++;
+        if (filterCategory) count++;
         if (filterStatus) count++;
         if (filterDateFrom || filterDateTo) count++;
         return count;
-    }, [filterType, filterAccount, filterParty, filterStatus, filterDateFrom, filterDateTo]);
+    }, [filterType, filterAccount, filterParty, filterCategory, filterStatus, filterDateFrom, filterDateTo]);
 
     const clearAllFilters = () => {
         setSearchQuery("");
         setFilterType("");
         setFilterAccount("");
         setFilterParty("");
+        setFilterCategory("");
         setFilterStatus("");
         setFilterDateFrom("");
         setFilterDateTo("");
@@ -317,6 +356,7 @@ export default function LedgerPage() {
             }
             if (filterAccount && tx.accountId !== filterAccount) return false;
             if (filterParty && tx.party_id !== filterParty) return false;
+            if (filterCategory && tx.category !== filterCategory) return false;
             if (filterDateFrom) {
                 const txDate = tx.date.split("T")[0];
                 if (txDate < filterDateFrom) return false;
@@ -340,7 +380,7 @@ export default function LedgerPage() {
             }
             return true;
         });
-    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo, searchQuery, parties, accounts]);
+    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterCategory, filterDateFrom, filterDateTo, searchQuery, parties, accounts]);
 
     const filteredSummary = useMemo(() => {
         const byCurrency: Record<string, { cashIn: number; cashOut: number; net: number }> = {};
@@ -434,8 +474,8 @@ export default function LedgerPage() {
             sortable: true,
             priority: 9,
             render: row => {
-                const typeKey = (row.type as TransactionType) || (row.dc === "cr" ? "income" : "expense");
-                const cfg = transactionTypeConfig[typeKey] || transactionTypeConfig.expense;
+                const typeKey = (row.type as string) || (row.dc === "cr" ? "income" : "expense");
+                const cfg = typeConfigMap[typeKey] || transactionTypeConfig[typeKey as TransactionType] || transactionTypeConfig.expense;
                 return (
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${cfg.badge}`}>
                         <i className={`bi ${cfg.icon}`} />
@@ -503,11 +543,16 @@ export default function LedgerPage() {
             header: "Category",
             sortable: true,
             priority: 7,
-            render: row => (
-                <span className="text-sm font-medium text-main-700">
-                    {row.category || "—"}
-                </span>
-            ),
+            render: row => {
+                const matchedCategory = categories.find(c => c.name.toLowerCase() === (row.category || "").toLowerCase());
+                const style = categoryColorStyles[matchedCategory?.color || "neutral"] || categoryColorStyles.neutral;
+                return (
+                    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ${style.badge}`}>
+                        <i className={`bi ${matchedCategory?.icon || "bi-tag"} text-xs`} />
+                        {row.category || "General"}
+                    </span>
+                );
+            },
         },
 
         { key: "notes", header: "Notes", priority: 5 },
@@ -656,8 +701,8 @@ export default function LedgerPage() {
                             className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
                         >
                             <option value="">All Types</option>
-                            {transactionTypes.map(t => (
-                                <option key={t.value} value={t.value}>{t.label}</option>
+                            {dynamicTypes.map(t => (
+                                <option key={t.code} value={t.code}>{t.label}</option>
                             ))}
                         </select>
                     </div>
@@ -674,6 +719,20 @@ export default function LedgerPage() {
                                 <option key={accountId} value={accountId}>
                                     {accounts.find(account => account.id === accountId)?.name || "Unknown account"}
                                 </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="min-w-0 xl:col-span-2">
+                        <label className="block text-[11px] font-semibold text-main-600 mb-1">Category</label>
+                        <select
+                            value={filterCategory}
+                            onChange={e => setFilterCategory(e.target.value)}
+                            className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map(c => (
+                                <option key={c.id} value={c.name}>{c.name}</option>
                             ))}
                         </select>
                     </div>
@@ -706,21 +765,21 @@ export default function LedgerPage() {
                         </select>
                     </div>
 
-                    <div className="min-w-0 sm:col-span-2 xl:col-span-4">
+                    <div className="min-w-0 sm:col-span-2 xl:col-span-2">
                         <label className="block text-[11px] font-semibold text-main-600 mb-1">Date Range</label>
-                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 min-w-0">
+                        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1 min-w-0">
                             <input
                                 type="date"
                                 value={filterDateFrom}
                                 onChange={e => setFilterDateFrom(e.target.value)}
-                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-1.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
                             />
                             <span className="text-main-400">—</span>
                             <input
                                 type="date"
                                 value={filterDateTo}
                                 onChange={e => setFilterDateTo(e.target.value)}
-                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-2 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
+                                className="w-full min-w-0 max-w-full border border-main-300 rounded-md px-1.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none cursor-pointer"
                             />
                         </div>
                     </div>
@@ -734,7 +793,7 @@ export default function LedgerPage() {
 
                     {filterType && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
-                            Type: {transactionTypes.find(t => t.value === filterType)?.label}
+                            Type: {typeConfigMap[filterType]?.label || filterType}
                             <button onClick={() => setFilterType("")} className="hover:text-danger ml-0.5">
                                 <i className="bi bi-x" />
                             </button>
@@ -751,6 +810,15 @@ export default function LedgerPage() {
                                 }}
                                 className="hover:text-danger ml-0.5 cursor-pointer"
                             >
+                                <i className="bi bi-x" />
+                            </button>
+                        </span>
+                    )}
+
+                    {filterCategory && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-main-300 text-main-700 text-xs">
+                            Category: {filterCategory}
+                            <button onClick={() => setFilterCategory("")} className="hover:text-danger ml-0.5">
                                 <i className="bi bi-x" />
                             </button>
                         </span>
@@ -820,7 +888,7 @@ export default function LedgerPage() {
             </section>
 
             {/* Transaction Details Modal */}
-            <Modal open={Boolean(viewingTransaction)} onClose={closeViewModal} size="md" position="center" blur closeOnBackdrop closeOnEsc>
+            <Modal open={Boolean(viewingTransaction)} onClose={closeViewModal} size="xl" position="center" blur closeOnBackdrop closeOnEsc>
                 <ModalHeader
                     title="Transaction Details"
                     icon="bi-receipt"
@@ -944,7 +1012,7 @@ export default function LedgerPage() {
             </Modal>
 
             {/* Add / Edit Ledger Entry Modal */}
-            <Modal open={open} onClose={closeModal} size="md" position="center" blur>
+            <Modal open={open} onClose={closeModal} size="xl" position="center" blur>
                 <ModalHeader
                     title={editingId ? "Edit Transaction" : "Add Ledger Entry"}
                     icon={editingId ? "bi-pencil-square" : "bi-journal-plus"}
@@ -979,23 +1047,38 @@ export default function LedgerPage() {
 
                         {/* Explicit Transaction Type Selection */}
                         <div>
-                            <label className="block text-xs font-semibold text-main-700 dark:text-main-300 mb-2 uppercase tracking-wider">
-                                Transaction Type <span className="text-red-500">*</span>
-                            </label>
+                            <div className="flex items-center justify-between mb-1.5">
+                                <label className="block text-xs font-semibold text-main-700 dark:text-main-300 uppercase tracking-wider">
+                                    Transaction Type <span className="text-red-500">*</span>
+                                </label>
+                                <Link
+                                    to="/finance/categories"
+                                    className="text-[11px] text-primary hover:underline flex items-center gap-1"
+                                >
+                                    <i className="bi bi-gear" /> Manage Types
+                                </Link>
+                            </div>
                             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-                                {transactionTypes.map(t => {
-                                    const cfg = transactionTypeConfig[t.value];
-                                    const isSelected = formData.type === t.value;
+                                {dynamicTypes.map(t => {
+                                    const cfg = typeConfigMap[t.code] || {
+                                        label: t.label,
+                                        dc: t.dc,
+                                        icon: t.icon,
+                                        badge: t.badge,
+                                        color: t.color,
+                                        description: t.description,
+                                    };
+                                    const isSelected = formData.type === t.code;
                                     const changesTransferKind = Boolean(editingId) && (
                                         editingTransferId
-                                            ? t.value !== "transfer"
-                                            : formData.type !== "transfer" && t.value === "transfer"
+                                            ? t.code !== "transfer"
+                                            : formData.type !== "transfer" && t.code === "transfer"
                                     );
                                     return (
                                         <button
-                                            key={t.value}
+                                            key={t.code}
                                             type="button"
-                                            onClick={() => setFormData(p => ({ ...p, type: t.value }))}
+                                            onClick={() => setFormData(p => ({ ...p, type: t.code as TransactionType }))}
                                             disabled={changesTransferKind}
                                             className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
                                                 isSelected
@@ -1010,7 +1093,7 @@ export default function LedgerPage() {
                                 })}
                             </div>
                             <p className="text-[11px] text-main-500 mt-1.5">
-                                {transactionTypeConfig[formData.type]?.description}
+                                {typeConfigMap[formData.type]?.description || "Select the transaction nature"}
                             </p>
                         </div>
 
@@ -1025,42 +1108,57 @@ export default function LedgerPage() {
                             size="md"
                         />
 
-                        {/* Party / Counterparty Selection */}
-                        {formData.type !== "transfer" && <div>
+                        {/* Searchable Party / Counterparty Selection */}
+                        {formData.type !== "transfer" && (
+                            <div>
+                                <div className="flex items-center justify-between mb-1">
+                                    <label className="block text-sm font-medium text-main">
+                                        Party / Counterparty <span className="text-xs text-main-500 font-normal">(Optional)</span>
+                                    </label>
+                                    <Link
+                                        to="/finance/parties"
+                                        className="text-xs text-primary hover:underline flex items-center gap-1"
+                                    >
+                                        <i className="bi bi-box-arrow-up-right" /> Manage Parties
+                                    </Link>
+                                </div>
+                                <SearchableSelect
+                                    placeholder="Search or choose counterparty..."
+                                    value={formData.party_id || null}
+                                    onChange={val => setFormData(p => ({ ...p, party_id: val }))}
+                                    options={partyOptions}
+                                    onAddNew={() => navigate("/finance/parties")}
+                                    addNewText="Manage / Add Parties"
+                                    clearable={true}
+                                />
+                            </div>
+                        )}
+
+                        {/* Searchable Category Selection */}
+                        <div>
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-sm font-medium text-main">
-                                    Party / Counterparty <span className="text-xs text-main-500 font-normal">(Optional)</span>
+                                    Category <span className="text-red-500">*</span>
                                 </label>
                                 <Link
-                                    to="/finance/parties"
+                                    to="/finance/categories"
                                     className="text-xs text-primary hover:underline flex items-center gap-1"
                                 >
-                                    <i className="bi bi-plus-circle" /> Manage Parties
+                                    <i className="bi bi-box-arrow-up-right" /> Manage Categories
                                 </Link>
                             </div>
-                            <select
-                                className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
-                                value={formData.party_id || ""}
-                                onChange={e => setFormData(p => ({ ...p, party_id: e.target.value || null }))}
-                            >
-                                <option value="">-- None / Direct --</option>
-                                {parties.map(p => (
-                                    <option key={p.id} value={p.id}>
-                                        {p.name} ({p.type})
-                                    </option>
-                                ))}
-                            </select>
-                        </div>}
-
-                        <TextInput
-                            label="Category"
-                            labelBgColor="bg-main-100"
-                            value={formData.category}
-                            onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                            placeholder="e.g. Salary, Rent, Loan, Food, Supplies"
-                            color="primary"
-                            size="md"
-                        />
+                            <SearchableSelect
+                                placeholder="Search category (e.g. Salary, Food, Housing, Fuel)..."
+                                value={formData.category || null}
+                                onChange={val => setFormData(p => ({ ...p, category: val || "General" }))}
+                                options={categoryOptions}
+                                allowCustom={true}
+                                onAddNew={() => navigate("/finance/categories")}
+                                addNewText="Manage / Add Categories"
+                                clearable={false}
+                                required={true}
+                            />
+                        </div>
 
                         <TextInput
                             label="Notes / Description"

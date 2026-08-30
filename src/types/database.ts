@@ -170,6 +170,85 @@ export interface Database {
                     updated_at?: string;
                 };
             };
+            transaction_categories: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    name: string;
+                    description: string;
+                    icon: string;
+                    color: string;
+                    is_system: boolean;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    user_id: string;
+                    name: string;
+                    description?: string;
+                    icon?: string;
+                    color?: string;
+                    is_system?: boolean;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    user_id?: string;
+                    name?: string;
+                    description?: string;
+                    icon?: string;
+                    color?: string;
+                    is_system?: boolean;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
+            transaction_types: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    code: string;
+                    label: string;
+                    dc: "dr" | "cr";
+                    icon: string;
+                    color: string;
+                    badge: string;
+                    description: string;
+                    is_system: boolean;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    user_id: string;
+                    code: string;
+                    label: string;
+                    dc: "dr" | "cr";
+                    icon?: string;
+                    color?: string;
+                    badge?: string;
+                    description?: string;
+                    is_system?: boolean;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    user_id?: string;
+                    code?: string;
+                    label?: string;
+                    dc?: "dr" | "cr";
+                    icon?: string;
+                    color?: string;
+                    badge?: string;
+                    description?: string;
+                    is_system?: boolean;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
         };
     };
 }

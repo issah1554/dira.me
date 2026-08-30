@@ -250,6 +250,7 @@ class SyncManager {
      */
     private async processQueueItem(item: SyncQueueItem): Promise<void> {
         const { table, action, recordId, payload, userId } = item;
+        const supabaseTable = table === "categories" ? "transaction_categories" : table;
 
         if (action === "insert") {
             const insertPayload = {
@@ -259,7 +260,7 @@ class SyncManager {
             };
 
             const { error } = await supabase
-                .from(table)
+                .from(supabaseTable)
                 .upsert([insertPayload], { onConflict: "id" });
 
             if (error) throw error;
@@ -270,14 +271,14 @@ class SyncManager {
             };
 
             const { error } = await supabase
-                .from(table)
+                .from(supabaseTable)
                 .update(updatePayload)
                 .eq("id", recordId);
 
             if (error) throw error;
         } else if (action === "delete") {
             const { error } = await supabase
-                .from(table)
+                .from(supabaseTable)
                 .delete()
                 .eq("id", recordId);
 
@@ -312,7 +313,29 @@ class SyncManager {
                 await offlineDb.putMany("parties", partiesData);
             }
 
-            // 3. Refresh Transactions
+            // 3. Refresh Categories
+            const { data: categoriesData, error: categoriesErr } = await supabase
+                .from("transaction_categories")
+                .select("*")
+                .eq("user_id", userId);
+
+            if (!categoriesErr && categoriesData) {
+                await offlineDb.clearStore("categories");
+                await offlineDb.putMany("categories", categoriesData);
+            }
+
+            // 4. Refresh Transaction Types
+            const { data: typesData, error: typesErr } = await supabase
+                .from("transaction_types")
+                .select("*")
+                .eq("user_id", userId);
+
+            if (!typesErr && typesData) {
+                await offlineDb.clearStore("transaction_types");
+                await offlineDb.putMany("transaction_types", typesData);
+            }
+
+            // 5. Refresh Transactions
             const { data: txData, error: txErr } = await supabase
                 .from("transactions")
                 .select("*")
