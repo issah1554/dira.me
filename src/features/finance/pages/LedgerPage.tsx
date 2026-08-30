@@ -28,15 +28,6 @@ const getCurrentTimeStr = () => {
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 };
 
-const transactionTypes: { value: TransactionType; label: string }[] = [
-    { value: "income", label: "Income" },
-    { value: "expense", label: "Expense" },
-    { value: "transfer", label: "Transfer" },
-    { value: "borrow", label: "Borrow" },
-    { value: "repayment", label: "Repayment" },
-    { value: "lend", label: "Lend" },
-    { value: "collection", label: "Collection" },
-];
 
 /* =======================
    Component
@@ -110,6 +101,7 @@ export default function LedgerPage() {
 
     useEffect(() => {
         if (accountParam) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setFilterAccount(accountParam);
             setShowFilters(true);
         }
