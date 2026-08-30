@@ -150,7 +150,7 @@ export function Dashboard() {
                                                     </span>
                                                 </div>
                                                 <p className="text-xs text-main-500">
-                                                    {tx.account} • {new Date(tx.date).toLocaleDateString("en-GB")}
+                                                    {accounts.find(account => account.id === tx.accountId)?.name || "Unknown account"} • {new Date(tx.date).toLocaleDateString("en-GB")}
                                                 </p>
                                             </div>
                                         </div>

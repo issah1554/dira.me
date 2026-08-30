@@ -89,7 +89,7 @@ export default function LedgerPage() {
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
-            account: accounts.length > 0 ? accounts[0].name : "",
+            account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
             category: "General",
@@ -105,7 +105,7 @@ export default function LedgerPage() {
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
-            account: accounts.length > 0 ? accounts[0].name : "",
+            account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
             category: "General",
@@ -144,8 +144,8 @@ export default function LedgerPage() {
             time: timeVal,
             type,
             amount: String(tx.amount),
-            account: transferFrom?.account || tx.account,
-            toAccount: transferTo?.account || "",
+            account: transferFrom?.accountId || tx.accountId,
+            toAccount: transferTo?.accountId || "",
             party_id: tx.party_id || null,
             category: tx.category || "General",
             notes: tx.notes || "",
@@ -165,11 +165,11 @@ export default function LedgerPage() {
             return;
         }
 
-        const selectedAccount = accounts.find(a => a.name === formData.account);
+        const selectedAccount = accounts.find(a => a.id === formData.account);
         const currency = selectedAccount?.currency || "TZS";
 
         if (formData.type === "transfer") {
-            const destinationAccount = accounts.find(a => a.name === formData.toAccount);
+            const destinationAccount = accounts.find(a => a.id === formData.toAccount);
             if (!destinationAccount) {
                 Toast.fire({ icon: "error", title: "Please select a destination account" });
                 return;
@@ -187,7 +187,7 @@ export default function LedgerPage() {
                 ? transactions.find(tx => tx.transferId === editingTransferId && tx.dc === "dr")
                 : undefined;
             const available = (selectedAccount?.currentBalance || 0)
-                + (originalDebit?.account === formData.account ? originalDebit.amount : 0);
+                + (originalDebit?.accountId === formData.account ? originalDebit.amount : 0);
             if (amt > available) {
                 Toast.fire({ icon: "error", title: "Transfer amount exceeds the available balance" });
                 return;
@@ -234,7 +234,7 @@ export default function LedgerPage() {
             amount: amt,
             type: formData.type,
             dc,
-            account: formData.account,
+            accountId: formData.account,
             party_id: formData.party_id || null,
             currency,
             category: formData.category || "General",
@@ -302,7 +302,7 @@ export default function LedgerPage() {
                 const txType = tx.type || (tx.dc === "cr" ? "income" : "expense");
                 if (txType !== filterType) return false;
             }
-            if (filterAccount && tx.account !== filterAccount) return false;
+            if (filterAccount && tx.accountId !== filterAccount) return false;
             if (filterParty && tx.party_id !== filterParty) return false;
             if (filterDateFrom) {
                 const txDate = tx.date.split("T")[0];
@@ -317,7 +317,8 @@ export default function LedgerPage() {
                 const party = parties.find(p => p.id === tx.party_id);
                 const matchCategory = tx.category?.toLowerCase().includes(q);
                 const matchNotes = tx.notes?.toLowerCase().includes(q);
-                const matchAccount = tx.account?.toLowerCase().includes(q);
+                const account = accounts.find(item => item.id === tx.accountId);
+                const matchAccount = account?.name.toLowerCase().includes(q);
                 const matchParty = party?.name.toLowerCase().includes(q);
                 const matchAmount = String(tx.amount).includes(q);
                 if (!matchCategory && !matchNotes && !matchAccount && !matchParty && !matchAmount) {
@@ -326,7 +327,7 @@ export default function LedgerPage() {
             }
             return true;
         });
-    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo, searchQuery, parties]);
+    }, [transactions, filterStatus, filterType, filterAccount, filterParty, filterDateFrom, filterDateTo, searchQuery, parties, accounts]);
 
     const filteredSummary = useMemo(() => {
         const byCurrency: Record<string, { cashIn: number; cashOut: number; net: number }> = {};
@@ -472,14 +473,14 @@ export default function LedgerPage() {
         },
 
         {
-            key: "account",
+            key: "accountId",
             header: "Account",
             sortable: true,
             priority: 8,
             render: row => (
                 <span className="inline-flex items-center gap-1 font-medium text-main-800">
                     <i className="bi bi-wallet2 text-xs text-primary" />
-                    {row.account}
+                    {accounts.find(account => account.id === row.accountId)?.name || "Unknown account"}
                 </span>
             ),
         },
@@ -548,12 +549,9 @@ export default function LedgerPage() {
     // Unique account list for filters
     const availableAccounts = useMemo(() => {
         const set = new Set<string>();
-        accounts.forEach(a => set.add(a.name));
-        transactions.forEach(t => {
-            if (t.account) set.add(t.account);
-        });
+        accounts.forEach(a => set.add(a.id));
         return Array.from(set);
-    }, [accounts, transactions]);
+    }, [accounts]);
 
     return (
         <div className="space-y-4 text-main-700">
@@ -659,8 +657,10 @@ export default function LedgerPage() {
                             className="w-full border border-main-300 rounded-md px-2.5 py-1.5 bg-main-100 text-main text-xs focus:outline-none focus:ring-2 focus:ring-primary/40 cursor-pointer"
                         >
                             <option value="">All Accounts</option>
-                            {availableAccounts.map(acc => (
-                                <option key={acc} value={acc}>{acc}</option>
+                            {availableAccounts.map(accountId => (
+                                <option key={accountId} value={accountId}>
+                                    {accounts.find(account => account.id === accountId)?.name || "Unknown account"}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -814,8 +814,10 @@ export default function LedgerPage() {
                     const transferRows = viewingTransaction.transferId
                         ? transactions.filter(tx => tx.transferId === viewingTransaction.transferId)
                         : [];
-                    const fromAccount = transferRows.find(tx => tx.dc === "dr")?.account;
-                    const toAccount = transferRows.find(tx => tx.dc === "cr")?.account;
+                    const fromAccountId = transferRows.find(tx => tx.dc === "dr")?.accountId;
+                    const toAccountId = transferRows.find(tx => tx.dc === "cr")?.accountId;
+                    const fromAccount = accounts.find(account => account.id === fromAccountId)?.name;
+                    const toAccount = accounts.find(account => account.id === toAccountId)?.name;
                     const party = parties.find(item => item.id === viewingTransaction.party_id);
                     const date = new Date(viewingTransaction.date);
                     const amount = viewingTransaction.currency === "USD"
@@ -859,7 +861,9 @@ export default function LedgerPage() {
                                     ) : (
                                         <div className="flex items-start justify-between gap-4 px-4 py-3">
                                             <dt className="text-sm text-main-500">Account</dt>
-                                            <dd className="text-sm font-medium text-main-800">{viewingTransaction.account}</dd>
+                                            <dd className="text-sm font-medium text-main-800">
+                                                {accounts.find(account => account.id === viewingTransaction.accountId)?.name || "Unknown account"}
+                                            </dd>
                                         </div>
                                     )}
                                     <div className="flex items-start justify-between gap-4 px-4 py-3">
@@ -1063,7 +1067,7 @@ export default function LedgerPage() {
                                 >
                                     <option value="">-- Choose Account --</option>
                                     {accounts.map(acc => (
-                                        <option key={acc.id} value={acc.name}>
+                                        <option key={acc.id} value={acc.id}>
                                             {acc.name} ({acc.type}) — Current Balance: {acc.balance}
                                         </option>
                                     ))}
@@ -1100,9 +1104,9 @@ export default function LedgerPage() {
                                 >
                                     <option value="">-- Choose Destination Account --</option>
                                     {accounts
-                                        .filter(acc => acc.name !== formData.account)
+                                        .filter(acc => acc.id !== formData.account)
                                         .map(acc => (
-                                            <option key={acc.id} value={acc.name}>
+                                            <option key={acc.id} value={acc.id}>
                                                 {acc.name} ({acc.type}) — Current Balance: {acc.balance}
                                             </option>
                                         ))}

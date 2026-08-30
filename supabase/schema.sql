@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     icon TEXT DEFAULT 'bi-wallet2',
     last_transaction DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (id, user_id)
 );
 
 -- Trigger for accounts.updated_at
@@ -136,12 +137,12 @@ CREATE POLICY "Users can delete their own parties"
 
 CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     type TEXT NOT NULL DEFAULT 'expense' CHECK (type IN ('income', 'expense', 'transfer', 'borrow', 'repayment', 'lend', 'collection')),
     dc TEXT NOT NULL CHECK (dc IN ('dr', 'cr')),
-    account TEXT NOT NULL,
+    account_id UUID NOT NULL,
     party_id UUID REFERENCES public.parties(id) ON DELETE SET NULL,
     transfer_id UUID,
     currency TEXT NOT NULL DEFAULT 'TZS' CHECK (currency IN ('TZS', 'USD')),
@@ -149,7 +150,12 @@ CREATE TABLE IF NOT EXISTS public.transactions (
     category TEXT DEFAULT '',
     status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'failed')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT transactions_account_owner_fk
+        FOREIGN KEY (account_id, user_id)
+        REFERENCES public.accounts (id, user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
 );
 
 -- Trigger for transactions.updated_at
@@ -161,6 +167,7 @@ CREATE TRIGGER set_transactions_updated_at
 
 -- Indexes for transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_party_id ON public.transactions(party_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_transfer_id ON public.transactions(transfer_id) WHERE transfer_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);

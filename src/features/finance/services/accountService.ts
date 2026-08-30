@@ -69,10 +69,7 @@ const rowToAccount = (row: AccountRow, currentBalance?: number): Account => {
 
 const computeAccountBalances = (accounts: AccountRow[], transactions: any[]): Account[] => {
     return accounts.map((accountRow) => {
-        const accountTxList = transactions.filter(
-            (tx) => tx.account?.trim().toLowerCase() === accountRow.name?.trim().toLowerCase() ||
-                    tx.account === accountRow.id
-        );
+        const accountTxList = transactions.filter((tx) => tx.account_id === accountRow.id);
 
         let net = 0;
         let latestDate = accountRow.last_transaction || "";

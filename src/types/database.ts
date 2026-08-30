@@ -35,7 +35,7 @@ export interface Database {
             accounts: {
                 Row: {
                     id: string;
-                    user_id: string;
+                    user_id?: string;
                     name: string;
                     type: string;
                     currency: CurrencyCode;
@@ -67,7 +67,7 @@ export interface Database {
                 };
                 Update: {
                     id?: string;
-                    user_id?: string;
+                    user_id: string;
                     name?: string;
                     type?: string;
                     currency?: CurrencyCode;
@@ -107,7 +107,7 @@ export interface Database {
                 };
                 Update: {
                     id?: string;
-                    user_id?: string;
+                    user_id: string;
                     name?: string;
                     type?: PartyType;
                     phone?: string;
@@ -125,7 +125,7 @@ export interface Database {
                     amount: number;
                     type: TransactionType;
                     dc: "dr" | "cr";
-                    account: string;
+                    account_id: string;
                     party_id?: string | null;
                     transfer_id?: string | null;
                     currency: CurrencyCode;
@@ -137,12 +137,12 @@ export interface Database {
                 };
                 Insert: {
                     id?: string;
-                    user_id?: string;
+                    user_id: string;
                     date: string;
                     amount: number;
                     type?: TransactionType;
                     dc?: "dr" | "cr";
-                    account: string;
+                    account_id: string;
                     party_id?: string | null;
                     transfer_id?: string | null;
                     currency?: CurrencyCode;
@@ -159,7 +159,7 @@ export interface Database {
                     amount?: number;
                     type?: TransactionType;
                     dc?: "dr" | "cr";
-                    account?: string;
+                    account_id?: string;
                     party_id?: string | null;
                     transfer_id?: string | null;
                     currency?: CurrencyCode;
@@ -181,7 +181,7 @@ export interface DbTransaction {
     type: TransactionType;
     dc: "dr" | "cr";
     notes: string;
-    account: string;
+    accountId: string;
     party_id?: string | null;
     currency?: CurrencyCode;
     category: string;
@@ -197,7 +197,7 @@ export interface TransactionFormData {
     type: TransactionType;
     dc: "dr" | "cr";
     notes: string;
-    account: string;
+    accountId: string;
     party_id?: string | null;
     currency?: CurrencyCode;
     category: string;
@@ -207,7 +207,7 @@ export interface TransactionFormData {
 export type TransactionFilter = {
     status?: "completed" | "pending" | "failed";
     type?: TransactionType;
-    account?: string;
+    accountId?: string;
     party_id?: string;
     currency?: CurrencyCode;
     dateFrom?: string;

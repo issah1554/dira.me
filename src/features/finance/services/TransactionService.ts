@@ -83,7 +83,7 @@ export type TransactionDTO = {
     amount: number;
     type: TransactionType;
     dc?: "dr" | "cr";
-    account: string;
+    accountId: string;
     party_id?: string | null;
     currency?: CurrencyCode;
     notes: string;
@@ -91,7 +91,7 @@ export type TransactionDTO = {
     status: "completed" | "pending" | "failed";
 };
 
-export type TransferDTO = Omit<TransactionDTO, "type" | "dc" | "account" | "party_id"> & {
+export type TransferDTO = Omit<TransactionDTO, "type" | "dc" | "accountId" | "party_id"> & {
     fromAccount: string;
     toAccount: string;
 };
@@ -123,7 +123,7 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         amount: typeof row.amount === "number" ? row.amount : parseFloat(String(row.amount)) || 0,
         type,
         dc,
-        account: row.account || "",
+        accountId: row.account_id,
         party_id: row.party_id || null,
         transferId: row.transfer_id || null,
         currency: (row.currency as CurrencyCode) || "TZS",
@@ -181,7 +181,7 @@ export const TransactionService = {
                 amount: payload.amount,
                 type,
                 dc,
-                account: payload.account,
+                account_id: payload.accountId,
                 party_id: payload.party_id || null,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
@@ -256,8 +256,8 @@ export const TransactionService = {
                 updated_at: now,
             };
             const rows: TransactionRow[] = [
-                { ...base, id: crypto.randomUUID(), dc: "dr", account: payload.fromAccount },
-                { ...base, id: crypto.randomUUID(), dc: "cr", account: payload.toAccount },
+                { ...base, id: crypto.randomUUID(), dc: "dr", account_id: payload.fromAccount },
+                { ...base, id: crypto.randomUUID(), dc: "cr", account_id: payload.toAccount },
             ];
 
             await offlineDb.putMany("transactions", rows);
@@ -308,7 +308,7 @@ export const TransactionService = {
                 amount: payload.amount,
                 type: "transfer" as const,
                 dc: row.dc,
-                account: row.dc === "dr" ? payload.fromAccount : payload.toAccount,
+                account_id: row.dc === "dr" ? payload.fromAccount : payload.toAccount,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
                 category: payload.category || "Transfer",
@@ -383,7 +383,7 @@ export const TransactionService = {
             } else if (payload.dc !== undefined) {
                 updateData.dc = payload.dc;
             }
-            if (payload.account !== undefined) updateData.account = payload.account;
+            if (payload.accountId !== undefined) updateData.account_id = payload.accountId;
             if (payload.party_id !== undefined) updateData.party_id = payload.party_id;
             if (payload.currency !== undefined) updateData.currency = payload.currency;
             if (payload.notes !== undefined) updateData.notes = payload.notes;

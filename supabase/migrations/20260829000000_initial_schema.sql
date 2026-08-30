@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS public.accounts (
     icon TEXT DEFAULT 'bi-wallet2',
     last_transaction DATE DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (id, user_id)
 );
 
 -- Trigger for accounts.updated_at
@@ -83,17 +84,22 @@ CREATE POLICY "Users can delete their own accounts"
 
 CREATE TABLE IF NOT EXISTS public.transactions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     amount NUMERIC(15, 2) NOT NULL DEFAULT 0.00,
     dc TEXT NOT NULL CHECK (dc IN ('dr', 'cr')),
-    account TEXT NOT NULL,
+    account_id UUID NOT NULL,
     currency TEXT NOT NULL DEFAULT 'TZS' CHECK (currency IN ('TZS', 'USD')),
     notes TEXT DEFAULT '',
     category TEXT DEFAULT '',
     status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending', 'failed')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT transactions_account_owner_fk
+        FOREIGN KEY (account_id, user_id)
+        REFERENCES public.accounts (id, user_id)
+        ON UPDATE CASCADE
+        ON DELETE RESTRICT
 );
 
 -- Trigger for transactions.updated_at
@@ -105,6 +111,7 @@ CREATE TRIGGER set_transactions_updated_at
 
 -- Indexes for transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
