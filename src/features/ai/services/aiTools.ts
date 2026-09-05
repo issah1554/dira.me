@@ -9,6 +9,7 @@ import type { Party } from "../../../types/party";
 
 export interface DraftTransactionAction {
     amount: number;
+    fee?: number;
     type: "income" | "expense" | "transfer" | "borrow" | "repayment" | "lend" | "collection";
     accountId: string;
     accountName: string;
@@ -68,6 +69,7 @@ export const AI_TOOL_DEFINITIONS = [
             type: "OBJECT",
             properties: {
                 amount: { type: "NUMBER", description: "The transaction amount (positive number)" },
+                fee: { type: "NUMBER", description: "Transfer fee or charge if applicable (for transfer transactions)" },
                 type: { type: "STRING", description: "Transaction type: 'income', 'expense', 'transfer', 'borrow', 'repayment', 'lend', 'collection'" },
                 category: { type: "STRING", description: "Category name (e.g. Food, Transport, Salary, Housing, Utilities)" },
                 accountName: { type: "STRING", description: "Name of the source account (e.g. Cash, NMB, CRDB, M-Pesa)" },
@@ -225,6 +227,7 @@ export const aiToolExecutors = {
 
     async draft_transaction(args: {
         amount: number;
+        fee?: number;
         type: string;
         category?: string;
         accountName?: string;
@@ -240,30 +243,33 @@ export const aiToolExecutors = {
         ]);
 
         // Match source account
-        let matchedAccount = accounts.find(a =>
+        const matchedAccount = accounts.find(a =>
             args.accountName && a.name.toLowerCase().includes(args.accountName.toLowerCase())
         ) || accounts[0];
 
         // Match target account for transfer
-        let matchedToAccount = args.toAccountName
+        const matchedToAccount = args.toAccountName
             ? accounts.find(a => a.name.toLowerCase().includes(args.toAccountName!.toLowerCase()))
             : undefined;
 
         // Match party
-        let matchedParty = args.partyName
+        const matchedParty = args.partyName
             ? parties.find(p => p.name.toLowerCase().includes(args.partyName!.toLowerCase()))
             : undefined;
 
         // Match category
-        let matchedCategory = args.category
+        const matchedCategory = args.category
             ? categories.find(c => c.name.toLowerCase() === args.category!.toLowerCase())?.name || args.category
             : "General";
 
         const validTypes = ["income", "expense", "transfer", "borrow", "repayment", "lend", "collection"] as const;
         const normalizedType = validTypes.includes(args.type as any) ? (args.type as DraftTransactionAction["type"]) : "expense";
 
+        const fee = args.fee ? Number(args.fee) : undefined;
+
         const draft: DraftTransactionAction = {
             amount: Number(args.amount) || 0,
+            fee: fee && fee > 0 ? fee : undefined,
             type: normalizedType,
             accountId: matchedAccount?.id || "",
             accountName: matchedAccount?.name || "Cash",

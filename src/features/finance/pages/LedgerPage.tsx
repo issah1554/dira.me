@@ -112,6 +112,7 @@ export default function LedgerPage() {
         time: getCurrentTimeStr(),
         type: "expense" as TransactionType,
         amount: "",
+        fee: "",
         account: "",
         toAccount: "",
         party_id: "" as string | null,
@@ -128,6 +129,7 @@ export default function LedgerPage() {
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
+            fee: "",
             account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
@@ -144,6 +146,7 @@ export default function LedgerPage() {
             time: getCurrentTimeStr(),
             type: "expense",
             amount: "",
+            fee: "",
             account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
@@ -175,19 +178,31 @@ export default function LedgerPage() {
         const transferPair = tx.transferId
             ? transactions.filter(item => item.transferId === tx.transferId)
             : [];
-        const transferFrom = transferPair.find(item => item.dc === "dr");
-        const transferTo = transferPair.find(item => item.dc === "cr");
+        const transferFrom = transferPair.find(item => item.type === "transfer" && item.dc === "dr")
+            || transferPair.find(item => item.dc === "dr" && item.category !== "Fees")
+            || transferPair.find(item => item.dc === "dr");
+        const transferTo = transferPair.find(item => item.type === "transfer" && item.dc === "cr")
+            || transferPair.find(item => item.dc === "cr");
+        const feeItem = transferPair.find(item => item.id !== transferFrom?.id && item.id !== transferTo?.id && item.dc === "dr");
+
+        const amountVal = tx.transferId
+            ? String(transferFrom?.amount || transferTo?.amount || tx.amount)
+            : String(tx.amount);
+        const notesVal = tx.transferId
+            ? (transferFrom?.notes || transferTo?.notes || tx.notes)
+            : tx.notes;
 
         setFormData({
             date: dateVal,
             time: timeVal,
-            type,
-            amount: String(tx.amount),
+            type: tx.transferId ? "transfer" : type,
+            amount: amountVal,
+            fee: feeItem ? String(feeItem.amount) : "",
             account: transferFrom?.accountId || tx.accountId,
             toAccount: transferTo?.accountId || "",
             party_id: tx.party_id || null,
             category: tx.category || "General",
-            notes: tx.notes || "",
+            notes: notesVal || "",
         });
         setOpen(true);
     };
@@ -207,6 +222,17 @@ export default function LedgerPage() {
         const selectedAccount = accounts.find(a => a.id === formData.account);
         const currency = selectedAccount?.currency || "TZS";
 
+        let fullIsoDate = new Date().toISOString();
+        if (formData.date) {
+            const timeVal = formData.time || "00:00";
+            const combined = new Date(`${formData.date}T${timeVal}:00`);
+            if (!isNaN(combined.getTime())) {
+                fullIsoDate = combined.toISOString();
+            } else {
+                fullIsoDate = new Date(formData.date).toISOString();
+            }
+        }
+
         if (formData.type === "transfer") {
             const destinationAccount = accounts.find(a => a.id === formData.toAccount);
             if (!destinationAccount) {
@@ -222,32 +248,32 @@ export default function LedgerPage() {
                 return;
             }
 
-            const originalDebit = editingTransferId
-                ? transactions.find(tx => tx.transferId === editingTransferId && tx.dc === "dr")
-                : undefined;
-            const available = (selectedAccount?.currentBalance || 0)
-                + (originalDebit?.accountId === formData.account ? originalDebit.amount : 0);
-            if (amt > available) {
-                Toast.fire({ icon: "error", title: "Transfer amount exceeds the available balance" });
+            const feeAmt = formData.fee.trim() !== "" ? parseFloat(formData.fee) : 0;
+            if (isNaN(feeAmt) || feeAmt < 0) {
+                Toast.fire({ icon: "error", title: "Please enter a valid positive fee (or 0)" });
                 return;
             }
-        }
 
-        let fullIsoDate = new Date().toISOString();
-        if (formData.date) {
-            const timeVal = formData.time || "00:00";
-            const combined = new Date(`${formData.date}T${timeVal}:00`);
-            if (!isNaN(combined.getTime())) {
-                fullIsoDate = combined.toISOString();
-            } else {
-                fullIsoDate = new Date(formData.date).toISOString();
+            const transferPair = editingTransferId
+                ? transactions.filter(tx => tx.transferId === editingTransferId)
+                : [];
+            const originalDebit = transferPair.find(tx => tx.type === "transfer" && tx.dc === "dr")
+                || transferPair.find(tx => tx.dc === "dr" && tx.category !== "Fees");
+            const originalFee = transferPair.find(tx => tx.id !== originalDebit?.id && tx.dc === "dr");
+
+            const available = (selectedAccount?.currentBalance || 0)
+                + (originalDebit?.accountId === formData.account ? originalDebit.amount : 0)
+                + (originalFee?.accountId === formData.account ? originalFee.amount : 0);
+
+            if ((amt + feeAmt) > available) {
+                Toast.fire({ icon: "error", title: "Transfer amount plus fee exceeds the available balance" });
+                return;
             }
-        }
 
-        if (formData.type === "transfer") {
             const transferPayload = {
                 date: fullIsoDate,
                 amount: amt,
+                fee: feeAmt > 0 ? feeAmt : undefined,
                 fromAccount: formData.account,
                 toAccount: formData.toAccount,
                 currency,
@@ -305,7 +331,7 @@ export default function LedgerPage() {
     const handleRemove = async () => {
         if (!viewingTransaction || deleteConfirmation !== "DELETE") return;
         const tx = viewingTransaction;
-        const isLinkedTransfer = tx.type === "transfer" && tx.transferId;
+        const isLinkedTransfer = Boolean(tx.transferId);
         if (isLinkedTransfer) await removeTransfer(tx.transferId!);
         else await removeTransaction(tx.id);
         closeViewModal();
@@ -893,15 +919,31 @@ export default function LedgerPage() {
                     const transferRows = viewingTransaction.transferId
                         ? transactions.filter(tx => tx.transferId === viewingTransaction.transferId)
                         : [];
-                    const fromAccountId = transferRows.find(tx => tx.dc === "dr")?.accountId;
-                    const toAccountId = transferRows.find(tx => tx.dc === "cr")?.accountId;
+                    const transferFrom = transferRows.find(tx => tx.type === "transfer" && tx.dc === "dr")
+                        || transferRows.find(tx => tx.dc === "dr" && tx.category !== "Fees")
+                        || transferRows.find(tx => tx.dc === "dr");
+                    const transferTo = transferRows.find(tx => tx.type === "transfer" && tx.dc === "cr")
+                        || transferRows.find(tx => tx.dc === "cr");
+                    const feeRow = transferRows.find(tx => tx.id !== transferFrom?.id && tx.id !== transferTo?.id && tx.dc === "dr");
+
+                    const fromAccountId = transferFrom?.accountId;
+                    const toAccountId = transferTo?.accountId;
                     const fromAccount = accounts.find(account => account.id === fromAccountId)?.name;
                     const toAccount = accounts.find(account => account.id === toAccountId)?.name;
                     const party = parties.find(item => item.id === viewingTransaction.party_id);
                     const date = new Date(viewingTransaction.date);
-                    const amount = viewingTransaction.currency === "USD"
-                        ? `$ ${viewingTransaction.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : `${viewingTransaction.amount.toLocaleString()} TZS`;
+
+                    const isUSD = viewingTransaction.currency === "USD";
+                    const formatAmt = (val: number) => isUSD
+                        ? `$ ${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : `${val.toLocaleString()} TZS`;
+
+                    const transferAmt = transferFrom?.amount || transferTo?.amount || viewingTransaction.amount;
+                    const feeAmt = feeRow ? feeRow.amount : 0;
+                    const totalOutflow = transferAmt + feeAmt;
+                    const displayAmount = viewingTransaction.transferId
+                        ? formatAmt(transferAmt)
+                        : formatAmt(viewingTransaction.amount);
 
                     return (
                         <>
@@ -912,7 +954,7 @@ export default function LedgerPage() {
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <h4 className="font-semibold text-lg">{config.label}</h4>
-                                        <p className="text-sm text-main-500">{amount}</p>
+                                        <p className="text-sm text-main-500">{displayAmount}</p>
                                     </div>
                                     <span className="px-2 py-0.5 rounded text-xs font-semibold capitalize bg-green-100 text-green-700">
                                         {viewingTransaction.status}
@@ -936,6 +978,22 @@ export default function LedgerPage() {
                                                 <dt className="text-sm text-main-500">To Account</dt>
                                                 <dd className="text-sm font-medium text-main-800">{toAccount || "Unknown"}</dd>
                                             </div>
+                                            <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                                <dt className="text-sm text-main-500">Transfer Amount</dt>
+                                                <dd className="text-sm font-semibold text-main-800">{formatAmt(transferAmt)}</dd>
+                                            </div>
+                                            {feeAmt > 0 && (
+                                                <>
+                                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                                        <dt className="text-sm text-main-500">Transfer Fee</dt>
+                                                        <dd className="text-sm font-semibold text-rose-600">{formatAmt(feeAmt)}</dd>
+                                                    </div>
+                                                    <div className="flex items-start justify-between gap-4 px-4 py-3 bg-main-200/30">
+                                                        <dt className="text-sm font-medium text-main-700">Total Deducted from Source</dt>
+                                                        <dd className="text-sm font-bold text-main-900">{formatAmt(totalOutflow)}</dd>
+                                                    </div>
+                                                </>
+                                            )}
                                         </>
                                     ) : (
                                         <div className="flex items-start justify-between gap-4 px-4 py-3">
@@ -968,7 +1026,7 @@ export default function LedgerPage() {
                                             </h5>
                                             <p className="text-xs text-red-700">
                                                 {viewingTransaction.transferId
-                                                    ? "Both linked transfer entries will be permanently deleted. "
+                                                    ? "All linked transfer entries and associated fees will be permanently deleted. "
                                                     : "This transaction will be permanently deleted. "}
                                                 Type <strong>DELETE</strong> to continue.
                                             </p>
@@ -1099,6 +1157,28 @@ export default function LedgerPage() {
                             color="primary"
                             size="md"
                         />
+
+                        {formData.type === "transfer" && (
+                            <TextInput
+                                label="Transfer Fee (Optional)"
+                                labelBgColor="bg-main-100"
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={formData.fee}
+                                onChange={e => setFormData(p => ({ ...p, fee: e.target.value }))}
+                                placeholder="0.00"
+                                color="primary"
+                                size="md"
+                                helperText={
+                                    formData.fee && parseFloat(formData.fee) > 0
+                                        ? `Total debited from source account: ${(
+                                            (parseFloat(formData.amount) || 0) + (parseFloat(formData.fee) || 0)
+                                          ).toLocaleString()} ${accounts.find(a => a.id === formData.account)?.currency || "TZS"} (${(parseFloat(formData.amount) || 0).toLocaleString()} transfer + ${(parseFloat(formData.fee) || 0).toLocaleString()} fee)`
+                                        : "Fee deducted from the source account (e.g. mobile money or bank charge)"
+                                }
+                            />
+                        )}
 
                         {/* Searchable Party / Counterparty Selection */}
                         {formData.type !== "transfer" && (

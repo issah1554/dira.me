@@ -210,6 +210,7 @@ export function useAiChat() {
                         fromAccount: draft.accountId,
                         toAccount: draft.toAccountId,
                         amount: draft.amount,
+                        fee: draft.fee,
                         notes: draft.notes || "Transfer via Dira AI",
                         category: draft.category || "Transfer",
                         date: draft.date || new Date().toISOString(),

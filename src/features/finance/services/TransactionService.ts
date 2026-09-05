@@ -94,6 +94,7 @@ export type TransactionDTO = {
 export type TransferDTO = Omit<TransactionDTO, "type" | "dc" | "accountId" | "party_id"> & {
     fromAccount: string;
     toAccount: string;
+    fee?: number;
 };
 
 export type Transaction = TransactionDTO & {
@@ -260,6 +261,29 @@ export const TransactionService = {
                 { ...base, id: crypto.randomUUID(), dc: "cr", account_id: payload.toAccount },
             ];
 
+            if (payload.fee && payload.fee > 0) {
+                const feeNotes = payload.notes
+                    ? `Transfer fee • ${payload.notes}`
+                    : "Transfer fee";
+                rows.push({
+                    id: crypto.randomUUID(),
+                    user_id: user.id,
+                    date,
+                    amount: payload.fee,
+                    type: "expense",
+                    dc: "dr",
+                    account_id: payload.fromAccount,
+                    party_id: null,
+                    transfer_id: transferId,
+                    currency: payload.currency || "TZS",
+                    notes: feeNotes,
+                    category: "Fees",
+                    status: payload.status || "completed",
+                    created_at: now,
+                    updated_at: now,
+                });
+            }
+
             await offlineDb.putMany("transactions", rows);
 
             if (typeof navigator !== "undefined" && navigator.onLine) {
@@ -293,47 +317,135 @@ export const TransactionService = {
             let rows = (await offlineDb.getAll<TransactionRow>("transactions"))
                 .filter(row => row.transfer_id === transferId);
 
-            if (rows.length !== 2 && typeof navigator !== "undefined" && navigator.onLine) {
+            if (rows.length < 2 && typeof navigator !== "undefined" && navigator.onLine) {
                 const { data, error } = await supabase.from("transactions").select("*").eq("transfer_id", transferId);
                 if (error) throw error;
                 rows = (data || []) as TransactionRow[];
             }
-            if (rows.length !== 2) throw new Error("Linked transfer pair not found");
+            if (rows.length < 2) throw new Error("Linked transfer pair not found");
+
+            const fromRow = rows.find(r => r.type === "transfer" && r.dc === "dr")
+                || rows.find(r => r.dc === "dr" && r.category !== "Fees");
+            const toRow = rows.find(r => r.type === "transfer" && r.dc === "cr")
+                || rows.find(r => r.dc === "cr");
+
+            if (!fromRow || !toRow) throw new Error("Linked transfer pair not found");
+
+            const existingFeeRow = rows.find(r => r.id !== fromRow.id && r.id !== toRow.id);
 
             const now = new Date().toISOString();
             const date = new Date(payload.date).toISOString();
-            const updatedRows = rows.map(row => ({
-                ...row,
+
+            const updatedFromRow: TransactionRow = {
+                ...fromRow,
                 date,
                 amount: payload.amount,
-                type: "transfer" as const,
-                dc: row.dc,
-                account_id: row.dc === "dr" ? payload.fromAccount : payload.toAccount,
+                type: "transfer",
+                dc: "dr",
+                account_id: payload.fromAccount,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
                 category: payload.category || "Transfer",
                 status: payload.status,
                 updated_at: now,
-            }));
+            };
 
-            await offlineDb.putMany("transactions", updatedRows);
+            const updatedToRow: TransactionRow = {
+                ...toRow,
+                date,
+                amount: payload.amount,
+                type: "transfer",
+                dc: "cr",
+                account_id: payload.toAccount,
+                currency: payload.currency || "TZS",
+                notes: payload.notes || "",
+                category: payload.category || "Transfer",
+                status: payload.status,
+                updated_at: now,
+            };
+
+            const rowsToSave: TransactionRow[] = [updatedFromRow, updatedToRow];
+            const rowsToDelete: TransactionRow[] = [];
+
+            if (payload.fee && payload.fee > 0) {
+                const feeNotes = payload.notes
+                    ? `Transfer fee • ${payload.notes}`
+                    : "Transfer fee";
+
+                if (existingFeeRow) {
+                    rowsToSave.push({
+                        ...existingFeeRow,
+                        date,
+                        amount: payload.fee,
+                        type: "expense",
+                        dc: "dr",
+                        account_id: payload.fromAccount,
+                        currency: payload.currency || "TZS",
+                        notes: feeNotes,
+                        category: "Fees",
+                        status: payload.status,
+                        updated_at: now,
+                    });
+                } else {
+                    rowsToSave.push({
+                        id: crypto.randomUUID(),
+                        user_id: fromRow.user_id,
+                        date,
+                        amount: payload.fee,
+                        type: "expense",
+                        dc: "dr",
+                        account_id: payload.fromAccount,
+                        party_id: null,
+                        transfer_id: transferId,
+                        currency: payload.currency || "TZS",
+                        notes: feeNotes,
+                        category: "Fees",
+                        status: payload.status,
+                        created_at: now,
+                        updated_at: now,
+                    });
+                }
+            } else if (existingFeeRow) {
+                rowsToDelete.push(existingFeeRow);
+            }
+
+            await offlineDb.putMany("transactions", rowsToSave);
+            for (const del of rowsToDelete) {
+                await offlineDb.deleteItem("transactions", del.id);
+            }
+
             if (typeof navigator !== "undefined" && navigator.onLine) {
                 try {
-                    const { error } = await supabase.from("transactions").upsert(updatedRows, { onConflict: "id" });
+                    const { error } = await supabase.from("transactions").upsert(rowsToSave, { onConflict: "id" });
                     if (error) throw error;
+                    if (rowsToDelete.length > 0) {
+                        const deleteIds = rowsToDelete.map(r => r.id);
+                        const { error: delError } = await supabase.from("transactions").delete().in("id", deleteIds);
+                        if (delError) throw delError;
+                    }
                     return;
                 } catch (err) {
                     console.warn("Online transfer update failed, queueing:", err);
                 }
             }
 
-            for (const row of updatedRows) {
+            for (const row of rowsToSave) {
+                const isNew = !rows.some(r => r.id === row.id);
                 await offlineDb.addToSyncQueue({
                     table: "transactions",
-                    action: "update",
+                    action: isNew ? "insert" : "update",
                     recordId: row.id,
                     payload: row,
                     userId: row.user_id || "",
+                });
+            }
+            for (const del of rowsToDelete) {
+                await offlineDb.addToSyncQueue({
+                    table: "transactions",
+                    action: "delete",
+                    recordId: del.id,
+                    payload: {},
+                    userId: del.user_id || "",
                 });
             }
         });
