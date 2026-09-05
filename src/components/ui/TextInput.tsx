@@ -105,53 +105,53 @@ export function TextInput({
     const colorClasses = {
         primary: {
             input: "bg-transparent border border-primary text-primary placeholder-primary/60 focus:ring-primary",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-primary"
         },
         secondary: {
             input: "bg-transparent border border-secondary text-secondary placeholder-secondary/60 focus:ring-secondary",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-secondary"
         },
         accent: {
             input: "bg-transparent border border-accent text-accent placeholder-accent/60 focus:ring-accent",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-accent"
         },
         neutral: {
             input: "bg-transparent border border-main text-main placeholder-main/60 focus:ring-main",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-main"
         },
         success: {
             input: "bg-transparent border border-success text-success placeholder-success/60 focus:ring-success",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-success"
         },
         warning: {
             input: "bg-transparent border border-warning text-warning placeholder-warning/60 focus:ring-warning",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-warning"
         },
         error: {
             input: "bg-transparent border border-danger text-danger placeholder-danger/60 focus:ring-danger",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-danger"
         },
         info: {
             input: "bg-transparent border border-info text-info placeholder-info/60 focus:ring-info",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
+            label: labelBgColor ?? "bg-main-0",
             text: "text-info"
         },
         light: {
-            input: "bg-transparent border border-light text-light placeholder-light/60 focus:ring-light",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
-            text: "text-light"
+            input: "bg-transparent border border-main-200 text-main placeholder-main-400 focus:ring-main-300",
+            label: labelBgColor ?? "bg-main-0",
+            text: "text-main-700"
         },
         dark: {
-            input: "bg-transparent border border-dark text-dark placeholder-dark/60 focus:ring-dark",
-            label: `${labelBgColor ?? "bg-white"} dark:bg-gray-900`,
-            text: "text-dark"
+            input: "bg-transparent border border-main-800 text-main placeholder-main-500 focus:ring-main-700",
+            label: labelBgColor ?? "bg-main-0",
+            text: "text-main-900"
         },
     };
 
@@ -196,7 +196,7 @@ export function TextInput({
                         tabIndex={-1}
                         aria-label={showPassword ? "Hide password" : "Show password"}
                         title={showPassword ? "Hide password" : "Show password"}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-main-500 hover:text-main-700 dark:text-main-400 dark:hover:text-main-200 focus:outline-none p-1 transition-colors cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-main-500 hover:text-main-700 focus:outline-none p-1 transition-colors cursor-pointer"
                     >
                         <i className={`bi ${showPassword ? "bi-eye-slash-fill" : "bi-eye-fill"} text-base`} />
                     </button>

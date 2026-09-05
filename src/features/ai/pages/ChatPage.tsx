@@ -138,7 +138,7 @@ export default function ChatPage() {
                 {/* Chat Header */}
                 <div className="px-5 py-3.5 bg-main-100 border-b border-main-300 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-sm">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary via-indigo-600 to-purple-600 text-main-0 flex items-center justify-center shadow-sm">
                             <i className="bi bi-stars text-xl animate-pulse" />
                         </div>
                         <div>
@@ -149,7 +149,7 @@ export default function ChatPage() {
                                 </span>
                             </div>
                             <p className="text-xs text-main-500 flex items-center gap-1.5 mt-0.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                                <span className="w-2 h-2 rounded-full bg-success-500 inline-block" />
                                 Connected to {summary.activeAccounts} accounts & {transactions.length} transactions
                             </p>
                         </div>
@@ -158,7 +158,7 @@ export default function ChatPage() {
                     <div className="flex items-center gap-2">
                         <button
                             onClick={createNewSession}
-                            className="px-3 py-1.5 text-xs font-semibold bg-primary text-white hover:bg-primary/90 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                            className="px-3 py-1.5 text-xs font-semibold bg-primary text-main-0 hover:bg-primary/90 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
                             title="Start fresh conversation"
                         >
                             <i className="bi bi-plus-lg text-xs" />
@@ -177,7 +177,7 @@ export default function ChatPage() {
                 </div>
 
                 {/* Messages Feed */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-main-100/60 dark:bg-main-200/30">
+                <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-main-100/60">
                     {messages.map(msg => {
                         const isUser = msg.role === "user";
                         return (
@@ -194,7 +194,7 @@ export default function ChatPage() {
                                 <div
                                     className={`max-w-[88%] sm:max-w-[78%] px-4 py-3 rounded-2xl space-y-2 ${
                                         isUser
-                                            ? "bg-primary text-white rounded-tr-none shadow-sm"
+                                            ? "bg-primary text-main-0 rounded-tr-none shadow-sm"
                                             : "bg-main-100 border border-main-300 text-main-800 rounded-tl-none shadow-sm"
                                     }`}
                                 >
@@ -218,7 +218,7 @@ export default function ChatPage() {
                                     <div
                                         className={`flex items-center justify-between text-[10px] pt-1.5 border-t ${
                                             isUser
-                                                ? "border-white/20 text-white/70"
+                                                ? "border-main-0/20 text-main-0/70"
                                                 : "border-main-300/60 text-main-400"
                                         }`}
                                     >
@@ -266,7 +266,7 @@ export default function ChatPage() {
                     )}
 
                     {error && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-start gap-2.5">
+                        <div className="p-4 bg-danger-500/10 border border-danger-500/30 rounded-xl text-danger-600 text-sm flex items-start gap-2.5">
                             <i className="bi bi-exclamation-triangle-fill text-base mt-0.5 shrink-0" />
                             <div>
                                 <p className="font-semibold">Notice</p>
@@ -298,7 +298,7 @@ export default function ChatPage() {
                     <button
                         type="submit"
                         disabled={loading || !input.trim()}
-                        className="px-5 py-3 rounded-xl bg-primary text-white font-semibold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer shrink-0"
+                        className="px-5 py-3 rounded-xl bg-primary text-main-0 font-semibold flex items-center gap-2 hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md cursor-pointer shrink-0"
                     >
                         {loading ? (
                             <>
@@ -334,7 +334,7 @@ export default function ChatPage() {
                         <button
                             onClick={() => setSidebarTab("prompts")}
                             className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
-                                sidebarTab === "prompts" ? "bg-primary text-white" : "text-main-600 hover:text-main-900"
+                                sidebarTab === "prompts" ? "bg-primary text-main-0" : "text-main-600 hover:text-main-900"
                             }`}
                         >
                             Prompts
@@ -342,7 +342,7 @@ export default function ChatPage() {
                         <button
                             onClick={() => setSidebarTab("history")}
                             className={`flex-1 py-1.5 rounded-md font-medium transition-colors cursor-pointer ${
-                                sidebarTab === "history" ? "bg-primary text-white" : "text-main-600 hover:text-main-900"
+                                sidebarTab === "history" ? "bg-primary text-main-0" : "text-main-600 hover:text-main-900"
                             }`}
                         >
                             History ({sessions.length})
@@ -354,7 +354,7 @@ export default function ChatPage() {
                 {sidebarTab === "prompts" && (
                     <div className="bg-main-200/60 border border-main-300 rounded-2xl p-4 space-y-4 shadow-sm flex-1 overflow-y-auto max-h-[500px]">
                         <h4 className="font-bold text-sm text-main-900 flex items-center gap-2">
-                            <i className="bi bi-lightbulb text-amber-500" />
+                            <i className="bi bi-lightbulb text-accent-500" />
                             Suggested Inquiries
                         </h4>
 

@@ -71,7 +71,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
                     {isInstallable && (
                         <button
                             onClick={promptInstall}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary text-white hover:bg-primary/90 transition-all shadow-sm cursor-pointer animate-fade-in"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-primary text-main-0 hover:bg-primary/90 transition-all shadow-sm cursor-pointer animate-fade-in"
                             title="Install Dira App on your desktop/mobile with offline support and shortcuts"
                             aria-label="Install App"
                         >
@@ -82,7 +82,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
                     {/* Offline & Sync Status Indicator */}
                     {!isOnline ? (
                         <div
-                            className="flex items-center text-amber-500 dark:text-amber-400 p-1"
+                            className="flex items-center text-accent-500 p-1"
                             title={pendingCount > 0 ? `Offline • ${pendingCount} changes saved locally` : "Offline (Local mode)"}
                             aria-label="Offline status"
                         >
@@ -98,7 +98,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
                         </div>
                     ) : (
                         <div
-                            className="text-emerald-600 dark:text-emerald-400 p-1 flex items-center"
+                            className="text-success-600 p-1 flex items-center"
                             title={lastSyncedAt ? `Connected & synced (last: ${lastSyncedAt.toLocaleTimeString()})` : "Connected & synced"}
                             aria-label="Cloud sync status"
                         >
@@ -140,7 +140,7 @@ export default function TopNav({ toggleSidebar, isMobile }: TopNavProps) {
                             className="relative text-main-500 hover:text-main-700 cursor-pointer"
                         >
                             <i className="bi bi-bell text-xl" />
-                            <span className="absolute -top-1 -right-2 text-[10px] px-1.5 rounded-full bg-red-600 text-white">
+                            <span className="absolute -top-1 -right-2 text-[10px] px-1.5 rounded-full bg-danger-600 text-main-0">
                                 3
                             </span>
                         </button>

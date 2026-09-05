@@ -140,8 +140,8 @@ export default function Accounts() {
     const getStatusBadge = (status: string) => {
         const colors: Record<string, string> = {
             active: "bg-success-100 text-success-800",
-            inactive: "bg-red-100 text-red-800",
-            pending: "bg-yellow-100 text-yellow-800"
+            inactive: "bg-danger-100 text-danger-800",
+            pending: "bg-warning-100 text-warning-800"
         };
         return (
             <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status]}`}>
@@ -155,11 +155,11 @@ export default function Accounts() {
             "cash": "bg-primary-100 text-primary-600",
             "savings": "bg-success-100 text-success-600",
             "current": "bg-accent-100 text-accent-600",
-            "mobile": "bg-orange-100 text-orange-600",
-            "digital": "bg-pink-100 text-pink-600",
-            "credit": "bg-red-100 text-red-600"
+            "mobile": "bg-pending-100 text-pending-600",
+            "digital": "bg-secondary-100 text-secondary-600",
+            "credit": "bg-danger-100 text-danger-600"
         };
-        return colors[type] || "bg-gray-100 text-gray-600";
+        return colors[type] || "bg-main-100 text-main-600";
     };
 
     if (loading && accounts.length === 0) {
@@ -172,7 +172,7 @@ export default function Accounts() {
 
     if (error) {
         return (
-            <div className="p-4 text-red-600 bg-red-50 rounded-lg">
+            <div className="p-4 text-danger-600 bg-danger-50 rounded-lg">
                 Error: {error}
                 <Button onClick={() => window.location.reload()} className="mt-2" color={"success"} size={"lg"}>
                     Retry
@@ -353,7 +353,7 @@ export default function Accounts() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-main-700 mb-2">
-                                    Account Type <span className="text-red-500">*</span>
+                                    Account Type <span className="text-danger-500">*</span>
                                 </label>
                                 <select
                                     className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
@@ -372,7 +372,7 @@ export default function Accounts() {
 
                             <div>
                                 <label className="block text-sm font-medium text-main-700 mb-2">
-                                    Currency <span className="text-red-500">*</span>
+                                    Currency <span className="text-danger-500">*</span>
                                 </label>
                                 <select
                                     className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main-800 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
@@ -503,34 +503,34 @@ export default function Accounts() {
                             </Link>
 
                             {viewAccount.transactionCount > 0 ? (
-                                <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                                <div className="rounded-lg border border-accent-300 bg-accent-50 p-4">
                                     <div className="flex items-start gap-2.5">
-                                        <i className="bi bi-shield-lock-fill text-amber-600 mt-0.5 text-base" />
+                                        <i className="bi bi-shield-lock-fill text-accent-600 mt-0.5 text-base" />
                                         <div>
-                                            <h5 className="font-semibold text-amber-900 text-sm">Cannot Delete Account</h5>
-                                            <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                                            <h5 className="font-semibold text-accent-900 text-sm">Cannot Delete Account</h5>
+                                            <p className="text-xs text-accent-800 mt-1 leading-relaxed">
                                                 This account is linked to <strong>{viewAccount.transactionCount}</strong> recorded transaction(s).
                                                 To maintain audit history and database referential integrity, accounts with transaction history cannot be deleted.
                                             </p>
-                                            <p className="text-xs text-amber-700 mt-1.5 font-medium">
+                                            <p className="text-xs text-accent-700 mt-1.5 font-medium">
                                                 Tip: You can edit this account to set its status to <strong>Inactive</strong>.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                <div className="rounded-lg border border-danger-300 bg-danger-50 p-4">
                                     <div className="flex items-start gap-2 mb-3">
-                                        <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
+                                        <i className="bi bi-exclamation-triangle text-danger-600 mt-0.5" />
                                         <div>
-                                            <h5 className="font-semibold text-red-800">Delete account</h5>
-                                            <p className="text-xs text-red-700">
+                                            <h5 className="font-semibold text-danger-800">Delete account</h5>
+                                            <p className="text-xs text-danger-700">
                                                 Type <strong>{viewAccount.name}</strong> to enable deletion. This action cannot be undone.
                                             </p>
                                         </div>
                                     </div>
                                     <input
-                                        className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-3 py-2 border border-danger-300 rounded-md bg-main-0 text-main-800 focus:outline-none focus:ring-2 focus:ring-danger-500"
                                         value={deleteConfirmation}
                                         onChange={e => setDeleteConfirmation(e.target.value)}
                                         placeholder={viewAccount.name}

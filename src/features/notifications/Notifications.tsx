@@ -91,7 +91,7 @@ export function Notifications() {
                         <i className={`bi ${tab.icon}`} />
                         {tab.label}
                         {tab.key === "unread" && unreadCount > 0 && (
-                            <span className="bg-danger text-white text-xs px-1.5 py-0.5 rounded-full">{unreadCount}</span>
+                            <span className="bg-danger text-main-0 text-xs px-1.5 py-0.5 rounded-full">{unreadCount}</span>
                         )}
                     </button>
                 ))}

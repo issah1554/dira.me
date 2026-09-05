@@ -87,7 +87,7 @@ export function ModalHeader({
 }: ModalHeaderProps) {
   return (
     <div
-      className={`flex items-center justify-between px-6 py-4 border-b border-main-300 shrink-0 text-main-800 dark:text-main-100 ${className}`}
+      className={`flex items-center justify-between px-6 py-4 border-b border-main-300 shrink-0 text-main-800 ${className}`}
     >
       {children || (
         <>
@@ -99,7 +99,7 @@ export function ModalHeader({
             <button
               type="button"
               onClick={onClose}
-              className="p-1 text-main-500 hover:text-main-800 dark:hover:text-main-200 transition-colors rounded-md cursor-pointer"
+              className="p-1 text-main-500 hover:text-main-800 transition-colors rounded-md cursor-pointer"
               aria-label="Close modal"
             >
               <i className="bi bi-x-lg text-sm" />
@@ -175,7 +175,7 @@ export function Modal({
     >
       {/* Backdrop */}
       <div
-        className={`absolute inset-0 bg-black/50 ${
+        className={`absolute inset-0 bg-main-300/50 ${
           blur ? "backdrop-blur-sm" : ""
         } ${backdropClassName}`}
         onClick={closeOnBackdrop ? onClose : undefined}
@@ -185,7 +185,7 @@ export function Modal({
       <div
         role="dialog"
         aria-modal="true"
-        className={`relative z-10 w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col rounded-xl bg-main-100 dark:bg-gray-900 shadow-2xl border border-main-300 dark:border-gray-800 overflow-hidden ${sizeClasses[size]} ${className}`}
+        className={`relative z-10 w-full max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-4rem)] flex flex-col rounded-xl bg-main-100 shadow-2xl border border-main-300 overflow-hidden ${sizeClasses[size]} ${className}`}
       >
         {children}
       </div>

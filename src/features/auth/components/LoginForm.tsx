@@ -23,7 +23,7 @@ export default function LoginForm({ onLogin, loading = false, error }: LoginForm
         <div className="bg-transparent p-4 md:p-6 rounded-lg animation-zoom-in">
             <div className="space-y-4">
                 {error && (
-                    <div className="bg-red-100 text-red-700 px-4 py-2 rounded" role="alert">
+                    <div className="bg-danger-100 text-danger-700 px-4 py-2 rounded" role="alert">
                         {error}
                     </div>
                 )}
@@ -77,7 +77,7 @@ export default function LoginForm({ onLogin, loading = false, error }: LoginForm
                         {loading ? (
                             <>
                                 <span
-                                    className="animate-spin inline-block border-2 border-t-2 border-white rounded-full w-4 h-4 mr-2"
+                                    className="animate-spin inline-block border-2 border-t-2 border-main-0 rounded-full w-4 h-4 mr-2"
                                     aria-hidden="true"
                                 ></span>
                                 <span role="status">Signing you in...</span>
@@ -88,7 +88,7 @@ export default function LoginForm({ onLogin, loading = false, error }: LoginForm
                     </Button>
                 </form>
 
-                <div className="mt-4 text-center text-sm text-gray-500">
+                <div className="mt-4 text-center text-sm text-main-500">
                     Don't have an account?{" "}
                     <Link
                         to="/auth/register"
@@ -98,7 +98,7 @@ export default function LoginForm({ onLogin, loading = false, error }: LoginForm
                     </Link>
 
                 </div>
-                <div className="mt-4 text-center text-sm text-gray-500">
+                <div className="mt-4 text-center text-sm text-main-500">
                     <Link
                         to="/home"
                         className="text-primary font-semibold hover:underline hover:text-accent"

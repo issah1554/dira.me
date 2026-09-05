@@ -32,7 +32,7 @@ export function TransactionDraftCard({
     };
 
     return (
-        <div className="mt-2.5 p-3.5 bg-main-100 dark:bg-main-300/60 border-2 border-primary/40 rounded-xl space-y-2.5 shadow-sm">
+        <div className="mt-2.5 p-3.5 bg-main-100 border-2 border-primary/40 rounded-xl space-y-2.5 shadow-sm">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
@@ -44,10 +44,10 @@ export function TransactionDraftCard({
                 <span
                     className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
                         isIncome
-                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            ? "bg-success-100 text-success-800"
                             : isTransfer
-                            ? "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
-                            : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                            ? "bg-primary-100 text-primary-800"
+                            : "bg-danger-100 text-danger-800"
                     }`}
                 >
                     {draft.type}
@@ -59,7 +59,7 @@ export function TransactionDraftCard({
                 <span className="text-xs text-main-500 font-medium">Proposed Amount:</span>
                 <span
                     className={`text-base font-extrabold ${
-                        isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                        isIncome ? "text-success-600" : "text-danger-600"
                     }`}
                 >
                     {isIncome ? "+" : "-"} {draft.amount.toLocaleString()} TZS
@@ -91,8 +91,8 @@ export function TransactionDraftCard({
                 {isTransfer && Boolean(draft.fee && draft.fee > 0) && (
                     <div>
                         <span className="text-[10px] text-main-400 block font-medium">Transfer Fee:</span>
-                        <span className="font-semibold text-rose-600 flex items-center gap-1 truncate">
-                            <i className="bi bi-credit-card text-rose-500 text-[10px]" />
+                        <span className="font-semibold text-danger-600 flex items-center gap-1 truncate">
+                            <i className="bi bi-credit-card text-danger-500 text-[10px]" />
                             {draft.fee!.toLocaleString()} TZS
                         </span>
                     </div>
@@ -128,8 +128,8 @@ export function TransactionDraftCard({
             {/* Action Button */}
             <div className="pt-1">
                 {isExecuted ? (
-                    <div className="w-full py-1.5 px-3 bg-emerald-500/15 border border-emerald-500/30 rounded-lg text-emerald-700 dark:text-emerald-300 text-xs font-semibold flex items-center justify-center gap-1.5">
-                        <i className="bi bi-check-circle-fill text-emerald-500" />
+                    <div className="w-full py-1.5 px-3 bg-success-500/15 border border-success-500/30 rounded-lg text-success-700 text-xs font-semibold flex items-center justify-center gap-1.5">
+                        <i className="bi bi-check-circle-fill text-success-500" />
                         <span>Recorded to Ledger</span>
                     </div>
                 ) : (

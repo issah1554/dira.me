@@ -29,7 +29,7 @@ export function Settings() {
                             onClick={() => setActiveSection(section.id)}
                             className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-left transition-colors
                                 ${activeSection === section.id
-                                    ? "bg-primary text-white"
+                                    ? "bg-primary text-main-0"
                                     : "hover:bg-main-200 text-main-700"}`}
                         >
                             <i className={`bi ${section.icon}`} />
@@ -101,7 +101,7 @@ export function Settings() {
                                         <span>{item}</span>
                                         <label className="relative inline-flex items-center cursor-pointer">
                                             <input type="checkbox" className="sr-only peer" defaultChecked />
-                                            <div className="w-11 h-6 bg-main-300 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                                            <div className="w-11 h-6 bg-main-300 peer-focus:ring-2 peer-focus:ring-primary rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-main-0 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-main-0 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                                         </label>
                                     </div>
                                 ))}

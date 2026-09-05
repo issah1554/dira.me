@@ -18,10 +18,10 @@ export interface AccountCardProps {
 }
 
 const statusColors: Record<string, string> = {
-    active: "bg-green-100 text-green-700 border-green-300",
+    active: "bg-success-100 text-success-700 border-success-300",
     inactive: "bg-main-100 text-main-700 border-main-300",
-    frozen: "bg-blue-100 text-blue-700 border-blue-300",
-    closed: "bg-red-100 text-red-700 border-red-300",
+    frozen: "bg-primary-100 text-primary-700 border-primary-300",
+    closed: "bg-danger-100 text-danger-700 border-danger-300",
 };
 
 export const AccountCard: React.FC<AccountCardProps> = ({
@@ -85,7 +85,7 @@ export const AccountCard: React.FC<AccountCardProps> = ({
                                     setMenuOpen(false);
                                     onDelete();
                                 }}
-                                className="w-full text-left px-3 py-1.5 hover:bg-main-300/40 text-sm text-red-600 flex items-center gap-2 cursor-pointer"
+                                className="w-full text-left px-3 py-1.5 hover:bg-main-300/40 text-sm text-danger-600 flex items-center gap-2 cursor-pointer"
                             >
                                 <i className="bi bi-trash" /> Delete
                             </button>

@@ -25,18 +25,18 @@ const sampleTodos: Todo[] = [
 
 const getPriorityColor = (priority: string) => {
     switch (priority) {
-        case "high": return "text-red-600 bg-red-100";
-        case "medium": return "text-yellow-600 bg-yellow-100";
-        case "low": return "text-green-600 bg-green-100";
+        case "high": return "text-danger-600 bg-danger-100";
+        case "medium": return "text-warning-600 bg-warning-100";
+        case "low": return "text-success-600 bg-success-100";
         default: return "text-main-600 bg-main-200";
     }
 };
 
 const getStatusColor = (status: string) => {
     switch (status) {
-        case "completed": return "text-green-600 bg-green-100";
-        case "in-progress": return "text-blue-600 bg-blue-100";
-        case "pending": return "text-orange-600 bg-orange-100";
+        case "completed": return "text-success-600 bg-success-100";
+        case "in-progress": return "text-primary-600 bg-primary-100";
+        case "pending": return "text-pending-600 bg-pending-100";
         default: return "text-main-600 bg-main-200";
     }
 };
@@ -88,16 +88,16 @@ export function TodoList() {
                     <div className="text-2xl font-bold text-primary">{stats.total}</div>
                     <div className="text-sm text-main-500">Total Tasks</div>
                 </div>
-                <div className="bg-orange-50 rounded-lg p-4 border border-orange-200">
-                    <div className="text-2xl font-bold text-orange-600">{stats.pending}</div>
+                <div className="bg-pending-50 rounded-lg p-4 border border-pending-200">
+                    <div className="text-2xl font-bold text-pending-600">{stats.pending}</div>
                     <div className="text-sm text-main-500">Pending</div>
                 </div>
-                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <div className="text-2xl font-bold text-blue-600">{stats.inProgress}</div>
+                <div className="bg-primary-50 rounded-lg p-4 border border-primary-200">
+                    <div className="text-2xl font-bold text-primary-600">{stats.inProgress}</div>
                     <div className="text-sm text-main-500">In Progress</div>
                 </div>
-                <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+                <div className="bg-success-50 rounded-lg p-4 border border-success-200">
+                    <div className="text-2xl font-bold text-success-600">{stats.completed}</div>
                     <div className="text-sm text-main-500">Completed</div>
                 </div>
             </div>
@@ -127,7 +127,7 @@ export function TodoList() {
                                 <button className="text-main-600 hover:text-primary p-2">
                                     <i className="bi bi-pencil" />
                                 </button>
-                                <button className="text-main-600 hover:text-red-600 p-2">
+                                <button className="text-main-600 hover:text-danger-600 p-2">
                                     <i className="bi bi-trash" />
                                 </button>
                             </div>

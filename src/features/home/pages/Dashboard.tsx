@@ -9,7 +9,7 @@ import type { TransactionType } from "../../../types/database";
 const quickActions = [
     { label: "Add Task", icon: "bi-plus-circle", to: "/todos", color: "bg-primary" },
     { label: "Ledger", icon: "bi-journal-text", to: "/finance/ledger", color: "bg-danger" },
-    { label: "Parties", icon: "bi-people", to: "/finance/parties", color: "bg-purple-600" },
+    { label: "Parties", icon: "bi-people", to: "/finance/parties", color: "bg-secondary" },
     { label: "Accounts", icon: "bi-bank", to: "/finance/accounts", color: "bg-success" },
 ];
 
@@ -49,24 +49,24 @@ export function Dashboard() {
             value: `${totalIncome.toLocaleString()} TZS`,
             subtext: "Income & loans received",
             icon: "bi-arrow-down-left-circle",
-            color: "text-emerald-600",
-            bg: "bg-emerald-500/10",
+            color: "text-success-600",
+            bg: "bg-success-500/10",
         },
         {
             label: "Total Cash Out",
             value: `${totalExpenses.toLocaleString()} TZS`,
             subtext: "Expenses & repayments",
             icon: "bi-arrow-up-right-circle",
-            color: "text-rose-600",
-            bg: "bg-rose-500/10",
+            color: "text-danger-600",
+            bg: "bg-danger-500/10",
         },
         {
             label: "Transactions",
             value: String(transactions.length),
             subtext: "Total recorded entries",
             icon: "bi-receipt",
-            color: "text-blue-600",
-            bg: "bg-blue-500/10",
+            color: "text-primary-600",
+            bg: "bg-primary-500/10",
         },
     ];
 
@@ -120,7 +120,7 @@ export function Dashboard() {
                             <p className="text-sm text-main-500 mb-3">No transactions recorded yet</p>
                             <Link
                                 to="/finance/ledger"
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-primary/90 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-main-0 text-xs font-medium rounded hover:bg-primary/90 transition-colors"
                             >
                                 <i className="bi bi-plus-lg" /> Add Entry
                             </Link>
@@ -156,7 +156,7 @@ export function Dashboard() {
                                         </div>
                                         <span
                                             className={`text-sm font-semibold ${
-                                                isCashIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
+                                                isCashIn ? "text-success-600" : "text-danger-600"
                                             }`}
                                         >
                                             {isCashIn ? "+" : "-"} {formatted}
@@ -181,7 +181,7 @@ export function Dashboard() {
                                 <div
                                     className={`w-10 h-10 ${action.color} rounded-lg flex items-center justify-center mb-2 group-hover:scale-110 transition-transform`}
                                 >
-                                    <i className={`bi ${action.icon} text-white text-lg`} />
+                                    <i className={`bi ${action.icon} text-main-0 text-lg`} />
                                 </div>
                                 <span className="text-sm font-medium text-main-700">{action.label}</span>
                             </Link>

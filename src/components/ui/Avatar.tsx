@@ -84,7 +84,7 @@ const Avatar: React.FC<AvatarProps> = ({
                     className={`
                         absolute bottom-0 right-0
                         flex items-center justify-center
-                        rounded-full border-2 border-white
+                        rounded-full border-2 border-main-0
                         ${statusColor[status]}
                         transition
                         hover:scale-105
@@ -95,7 +95,7 @@ const Avatar: React.FC<AvatarProps> = ({
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
-                        className="w-3 h-3 text-white"
+                        className="w-3 h-3 text-main-0"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"

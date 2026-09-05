@@ -32,7 +32,7 @@ export default function RegisterForm({
         <div className="card animation-zoom-in bg-transparent border-0 p-0 p-md-4">
             <div className="card-body p-0">
                 {error && (
-                    <div className="alert alert-danger">{error}</div>
+                    <div className="bg-danger-100 text-danger-700 px-4 py-2 rounded" role="alert">{error}</div>
                 )}
 
                 <form  className="grid gap-3">
@@ -94,7 +94,7 @@ export default function RegisterForm({
                         {loading ? (
                             <>
                                 <span
-                                    className="animate-spin inline-block border-2 border-t-2 border-white rounded-full w-4 h-4 mr-2"
+                                    className="animate-spin inline-block border-2 border-t-2 border-main-0 rounded-full w-4 h-4 mr-2"
                                     aria-hidden="true"
                                 ></span>
                                 <span role="status">Signing you up...</span>

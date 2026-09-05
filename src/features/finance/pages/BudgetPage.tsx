@@ -38,7 +38,7 @@ const columns: Column<BudgetRow>[] = [
         sortable: true,
         priority: 9,
         render: row => (
-            <span className="font-semibold text-blue-700">
+            <span className="font-semibold text-primary-700">
                 {row.planned_amount.toLocaleString()} TZS
             </span>
         ),
@@ -51,8 +51,8 @@ const columns: Column<BudgetRow>[] = [
         render: row => (
             <span
                 className={`font-semibold ${row.actual_amount > row.planned_amount
-                        ? "text-red-600"
-                        : "text-green-600"
+                        ? "text-danger-600"
+                        : "text-success-600"
                     }`}
             >
                 {row.actual_amount.toLocaleString()} TZS
@@ -67,10 +67,10 @@ const columns: Column<BudgetRow>[] = [
         render: row => (
             <span
                 className={`px-2 py-0.5 rounded text-xs font-semibold ${row.status === "on-track"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-success-100 text-success-700"
                         : row.status === "over-budget"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-yellow-100 text-yellow-700"
+                            ? "bg-danger-100 text-danger-700"
+                            : "bg-warning-100 text-warning-700"
                     }`}
             >
                 {row.status}

@@ -180,7 +180,7 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
         >
             {!image && (
                 <div
-                    className="cursor-pointer rounded-xl border-2 border-dashed border-blue-500 bg-main-100 p-10 text-main-600 transition hover:bg-main-200"
+                    className="cursor-pointer rounded-xl border-2 border-dashed border-primary-500 bg-main-100 p-10 text-main-600 transition hover:bg-main-200"
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
                         e.preventDefault();
@@ -191,10 +191,10 @@ const ProfilePictureEditor: React.FC<ProfilePictureEditorProps> = ({
                         (document.getElementById("fileInput") as HTMLInputElement)?.click()
                     }
                 >
-                    <i className="bi bi-cloud-arrow-up text-3xl text-blue-500" />
+                    <i className="bi bi-cloud-arrow-up text-3xl text-primary-500" />
                     <p className="mt-3 text-base">
                         Drag & drop an image or{" "}
-                        <span className="font-semibold text-blue-500">browse</span>
+                        <span className="font-semibold text-primary-500">browse</span>
                     </p>
                     <input
                         id="fileInput"

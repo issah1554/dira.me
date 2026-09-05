@@ -31,14 +31,14 @@ export const partyTypeLabels: Record<PartyType, string> = {
 };
 
 export const partyTypeColors: Record<PartyType, { bg: string; text: string; badge: string }> = {
-    person: { bg: "bg-blue-100 dark:bg-blue-950/40", text: "text-blue-600 dark:text-blue-400", badge: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300" },
-    company: { bg: "bg-purple-100 dark:bg-purple-950/40", text: "text-purple-600 dark:text-purple-400", badge: "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300" },
-    employer: { bg: "bg-indigo-100 dark:bg-indigo-950/40", text: "text-indigo-600 dark:text-indigo-400", badge: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300" },
-    customer: { bg: "bg-green-100 dark:bg-green-950/40", text: "text-green-600 dark:text-green-400", badge: "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300" },
-    merchant: { bg: "bg-amber-100 dark:bg-amber-950/40", text: "text-amber-600 dark:text-amber-400", badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300" },
-    bank: { bg: "bg-cyan-100 dark:bg-cyan-950/40", text: "text-cyan-600 dark:text-cyan-400", badge: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300" },
-    government: { bg: "bg-rose-100 dark:bg-rose-950/40", text: "text-rose-600 dark:text-rose-400", badge: "bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300" },
-    other: { bg: "bg-gray-100 dark:bg-gray-800", text: "text-gray-600 dark:text-gray-400", badge: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300" },
+    person: { bg: "bg-primary-100", text: "text-primary-600", badge: "bg-primary-100 text-primary-800" },
+    company: { bg: "bg-secondary-100", text: "text-secondary-600", badge: "bg-secondary-100 text-secondary-800" },
+    employer: { bg: "bg-primary-100", text: "text-primary-600", badge: "bg-primary-100 text-primary-800" },
+    customer: { bg: "bg-success-100", text: "text-success-600", badge: "bg-success-100 text-success-800" },
+    merchant: { bg: "bg-accent-100", text: "text-accent-600", badge: "bg-accent-100 text-accent-800" },
+    bank: { bg: "bg-info-100", text: "text-info-600", badge: "bg-info-100 text-info-800" },
+    government: { bg: "bg-danger-100", text: "text-danger-600", badge: "bg-danger-100 text-danger-800" },
+    other: { bg: "bg-main-200", text: "text-main-600", badge: "bg-main-200 text-main-800" },
 };
 
 const rowToParty = (row: PartyRow): Party => {

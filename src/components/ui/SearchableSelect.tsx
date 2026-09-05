@@ -160,7 +160,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
         <div ref={containerRef} className={`relative w-full ${className}`}>
             {label && (
                 <label className="block text-sm font-medium text-main mb-1">
-                    {label} {required && <span className="text-red-500">*</span>}
+                    {label} {required && <span className="text-danger-500">*</span>}
                 </label>
             )}
 
@@ -177,7 +177,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 className={`
                     w-full flex items-center justify-between gap-2 rounded-lg border bg-main-100 text-main transition-all cursor-pointer select-none
                     ${sizeClasses}
-                    ${error ? "border-red-500 ring-1 ring-red-500" : isOpen ? "border-primary ring-2 ring-primary/30" : "border-main-300 hover:border-main-400"}
+                    ${error ? "border-danger-500 ring-1 ring-danger-500" : isOpen ? "border-primary ring-2 ring-primary/30" : "border-main-300 hover:border-main-400"}
                     ${disabled ? "opacity-60 cursor-not-allowed bg-main-200" : ""}
                 `}
             >
@@ -210,7 +210,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                         <button
                             type="button"
                             onClick={handleClear}
-                            className="text-main-400 hover:text-red-500 p-0.5 rounded transition-colors"
+                            className="text-main-400 hover:text-danger-500 p-0.5 rounded transition-colors"
                             aria-label="Clear selection"
                         >
                             <i className="bi bi-x text-base" />
@@ -222,7 +222,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
 
             {/* Dropdown Menu */}
             {isOpen && (
-                <div className="absolute z-50 mt-1 w-full rounded-lg border border-main-300 bg-main-100 dark:bg-main-200 shadow-xl overflow-hidden animate-fade-in flex flex-col max-h-72">
+                <div className="absolute z-50 mt-1 w-full rounded-lg border border-main-300 bg-main-100 shadow-xl overflow-hidden animate-fade-in flex flex-col max-h-72">
                     {/* Search Input */}
                     <div className="p-2 border-b border-main-300 bg-main-200/50 flex items-center gap-2">
                         <i className="bi bi-search text-main-400 text-xs ml-1" />
@@ -267,7 +267,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                                                 setIsOpen(false);
                                                 setSearchQuery("");
                                             }}
-                                            className="px-2.5 py-1 bg-primary text-white text-xs rounded hover:bg-primary/90 font-medium cursor-pointer"
+                                            className="px-2.5 py-1 bg-primary text-main-0 text-xs rounded hover:bg-primary/90 font-medium cursor-pointer"
                                         >
                                             Use &quot;{searchQuery}&quot;
                                         </button>
@@ -346,7 +346,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
                 </div>
             )}
 
-            {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
+            {error && <p className="text-xs text-danger-500 mt-1">{error}</p>}
             {helperText && !error && <p className="text-xs text-main-500 mt-1">{helperText}</p>}
         </div>
     );

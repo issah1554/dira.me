@@ -34,7 +34,7 @@ export default function LandingPage() {
                     Take control of your money and time with Dira.me.
                 </p>
                 <div className="flex gap-4">
-                    <Link to="/auth/register" className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition">
+                    <Link to="/auth/register" className="px-6 py-3 bg-primary text-main-0 rounded-lg hover:bg-primary/90 transition">
                         Get Started
                     </Link>
                     <Link to="/auth/login" className="px-6 py-3 border-2 border-primary text-primary rounded-lg hover:bg-primary/10 transition">

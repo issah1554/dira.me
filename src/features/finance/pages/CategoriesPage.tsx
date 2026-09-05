@@ -303,7 +303,7 @@ export default function CategoriesPage() {
                         }}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                             activeTab === "categories"
-                                ? "bg-primary text-white shadow-sm"
+                                ? "bg-primary text-main-0 shadow-sm"
                                 : "text-main-600 hover:text-main-900"
                         }`}
                     >
@@ -311,7 +311,7 @@ export default function CategoriesPage() {
                         Categories
                         <span
                             className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
-                                activeTab === "categories" ? "bg-white/20 text-white" : "bg-main-300 text-main-700"
+                                activeTab === "categories" ? "bg-main-0/20 text-main-0" : "bg-main-300 text-main-700"
                             }`}
                         >
                             {categories.length}
@@ -325,7 +325,7 @@ export default function CategoriesPage() {
                         }}
                         className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                             activeTab === "types"
-                                ? "bg-primary text-white shadow-sm"
+                                ? "bg-primary text-main-0 shadow-sm"
                                 : "text-main-600 hover:text-main-900"
                         }`}
                     >
@@ -333,7 +333,7 @@ export default function CategoriesPage() {
                         Transaction Types
                         <span
                             className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold ${
-                                activeTab === "types" ? "bg-white/20 text-white" : "bg-main-300 text-main-700"
+                                activeTab === "types" ? "bg-main-0/20 text-main-0" : "bg-main-300 text-main-700"
                             }`}
                         >
                             {types.length}
@@ -418,7 +418,7 @@ export default function CategoriesPage() {
                                                 </button>
                                                 <button
                                                     onClick={() => handleDeleteCategory(cat)}
-                                                    className="p-1 rounded text-main-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                                    className="p-1 rounded text-main-500 hover:text-danger-600 hover:bg-danger-50 transition-colors"
                                                     title="Delete Category"
                                                 >
                                                     <i className="bi bi-trash text-xs" />
@@ -489,7 +489,7 @@ export default function CategoriesPage() {
                                                 {!typeItem.isSystem && (
                                                     <button
                                                         onClick={() => handleDeleteType(typeItem)}
-                                                        className="p-1 rounded text-main-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                                                        className="p-1 rounded text-main-500 hover:text-danger-600 hover:bg-danger-50 transition-colors"
                                                         title="Delete Type"
                                                     >
                                                         <i className="bi bi-trash text-xs" />
@@ -507,8 +507,8 @@ export default function CategoriesPage() {
                                         <span
                                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
                                                 isCashIn
-                                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
-                                                    : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                                    ? "bg-success-100 text-success-800"
+                                                    : "bg-danger-100 text-danger-800"
                                             }`}
                                         >
                                             {isCashIn ? "Credit (Cash In)" : "Debit (Cash Out)"}

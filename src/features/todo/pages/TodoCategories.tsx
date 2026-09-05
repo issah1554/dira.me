@@ -13,12 +13,12 @@ type Category = {
 };
 
 const sampleCategories: Category[] = [
-    { id: 1, name: "Finance", description: "Financial tasks and money management", color: "bg-green-500", icon: "bi-wallet2", taskCount: 12 },
-    { id: 2, name: "Bills", description: "Utility and subscription payments", color: "bg-red-500", icon: "bi-receipt", taskCount: 8 },
-    { id: 3, name: "Personal", description: "Personal errands and activities", color: "bg-blue-500", icon: "bi-person", taskCount: 15 },
-    { id: 4, name: "Shopping", description: "Shopping lists and purchases", color: "bg-purple-500", icon: "bi-cart", taskCount: 6 },
-    { id: 5, name: "Health", description: "Health and wellness tasks", color: "bg-pink-500", icon: "bi-heart-pulse", taskCount: 4 },
-    { id: 6, name: "Work", description: "Work-related tasks", color: "bg-orange-500", icon: "bi-briefcase", taskCount: 20 },
+    { id: 1, name: "Finance", description: "Financial tasks and money management", color: "bg-success-500", icon: "bi-wallet2", taskCount: 12 },
+    { id: 2, name: "Bills", description: "Utility and subscription payments", color: "bg-danger-500", icon: "bi-receipt", taskCount: 8 },
+    { id: 3, name: "Personal", description: "Personal errands and activities", color: "bg-primary-500", icon: "bi-person", taskCount: 15 },
+    { id: 4, name: "Shopping", description: "Shopping lists and purchases", color: "bg-secondary-500", icon: "bi-cart", taskCount: 6 },
+    { id: 5, name: "Health", description: "Health and wellness tasks", color: "bg-accent-500", icon: "bi-heart-pulse", taskCount: 4 },
+    { id: 6, name: "Work", description: "Work-related tasks", color: "bg-warning-500", icon: "bi-briefcase", taskCount: 20 },
 ];
 
 export function TodoCategories() {
@@ -26,13 +26,13 @@ export function TodoCategories() {
     const [formData, setFormData] = useState({
         name: "",
         description: "",
-        color: "bg-blue-500",
+        color: "bg-primary-500",
         icon: "bi-tag"
     });
 
     const handleClose = () => {
         setOpen(false);
-        setFormData({ name: "", description: "", color: "bg-blue-500", icon: "bi-tag" });
+        setFormData({ name: "", description: "", color: "bg-primary-500", icon: "bi-tag" });
     };
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -60,7 +60,7 @@ export function TodoCategories() {
                     <div key={category.id} className="bg-main-200 rounded-lg p-5 border border-main-300 hover:border-primary/70 hover:shadow-md transition-all">
                         <div className="flex items-start justify-between mb-3">
                             <div className="flex items-center gap-3">
-                                <div className={`w-12 h-12 ${category.color} rounded-lg flex items-center justify-center text-white`}>
+                                <div className={`w-12 h-12 ${category.color} rounded-lg flex items-center justify-center text-main-0`}>
                                     <i className={`bi ${category.icon} text-xl`} />
                                 </div>
                                 <div>
@@ -72,7 +72,7 @@ export function TodoCategories() {
                                 <button className="text-main-600 hover:text-primary p-1">
                                     <i className="bi bi-pencil" />
                                 </button>
-                                <button className="text-main-600 hover:text-red-600 p-1">
+                                <button className="text-main-600 hover:text-danger-600 p-1">
                                     <i className="bi bi-trash" />
                                 </button>
                             </div>
@@ -119,12 +119,12 @@ export function TodoCategories() {
                                     value={formData.color}
                                     onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setFormData(p => ({ ...p, color: e.target.value }))}
                                 >
-                                    <option value="bg-blue-500">Blue</option>
-                                    <option value="bg-green-500">Green</option>
-                                    <option value="bg-red-500">Red</option>
-                                    <option value="bg-purple-500">Purple</option>
-                                    <option value="bg-orange-500">Orange</option>
-                                    <option value="bg-pink-500">Pink</option>
+                                    <option value="bg-primary-500">Primary</option>
+                                    <option value="bg-success-500">Success</option>
+                                    <option value="bg-danger-500">Danger</option>
+                                    <option value="bg-secondary-500">Secondary</option>
+                                    <option value="bg-warning-500">Warning</option>
+                                    <option value="bg-accent-500">Accent</option>
                                 </select>
                             </div>
                             <div>

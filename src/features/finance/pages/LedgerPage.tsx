@@ -516,7 +516,7 @@ export default function LedgerPage() {
                     : `${row.amount.toLocaleString()} TZS`;
                 return (
                     <span
-                        className={`font-semibold ${isCashIn ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}
+                        className={`font-semibold ${isCashIn ? "text-success-600" : "text-danger-600"}`}
                     >
                         {isCashIn ? "+" : "-"} {formattedAmount}
                     </span>
@@ -583,10 +583,10 @@ export default function LedgerPage() {
             render: row => (
                 <span
                     className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${row.status === "completed"
-                        ? "bg-green-100 text-green-700"
+                        ? "bg-success-100 text-success-700"
                         : row.status === "pending"
-                            ? "bg-yellow-100 text-yellow-700"
-                            : "bg-red-100 text-red-700"
+                            ? "bg-warning-100 text-warning-700"
+                            : "bg-danger-100 text-danger-700"
                         }`}
                 >
                     {row.status}
@@ -667,7 +667,7 @@ export default function LedgerPage() {
                         <i className="bi bi-sliders text-xs" />
                         <span>Filters</span>
                         {activeFilterCount > 0 && (
-                            <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold bg-primary text-white rounded-full">
+                            <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold bg-primary text-main-0 rounded-full">
                                 {activeFilterCount}
                             </span>
                         )}
@@ -890,13 +890,13 @@ export default function LedgerPage() {
                         <p className="text-[11px] text-main-500">Transactions</p>
                         <p className="text-base font-bold text-main-800">{filteredSummary.count.toLocaleString()}</p>
                     </div>
-                    <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 min-w-0">
-                        <p className="text-[11px] text-emerald-700">Cash In</p>
-                        <div className="text-sm font-bold text-emerald-700 wrap-break-word">{renderSummaryAmounts("cashIn")}</div>
+                    <div className="rounded-lg border border-success-300 bg-success-50 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-success-700">Cash In</p>
+                        <div className="text-sm font-bold text-success-700 wrap-break-word">{renderSummaryAmounts("cashIn")}</div>
                     </div>
-                    <div className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 min-w-0">
-                        <p className="text-[11px] text-rose-700">Cash Out</p>
-                        <div className="text-sm font-bold text-rose-700 wrap-break-word">{renderSummaryAmounts("cashOut")}</div>
+                    <div className="rounded-lg border border-danger-300 bg-danger-50 px-3 py-2 min-w-0">
+                        <p className="text-[11px] text-danger-700">Cash Out</p>
+                        <div className="text-sm font-bold text-danger-700 wrap-break-word">{renderSummaryAmounts("cashOut")}</div>
                     </div>
                     <div className="rounded-lg border border-primary-300 bg-primary-100 px-3 py-2 min-w-0">
                         <p className="text-[11px] text-primary-700">Net</p>
@@ -956,7 +956,7 @@ export default function LedgerPage() {
                                         <h4 className="font-semibold text-lg">{config.label}</h4>
                                         <p className="text-sm text-main-500">{displayAmount}</p>
                                     </div>
-                                    <span className="px-2 py-0.5 rounded text-xs font-semibold capitalize bg-green-100 text-green-700">
+                                    <span className="px-2 py-0.5 rounded text-xs font-semibold capitalize bg-success-100 text-success-700">
                                         {viewingTransaction.status}
                                     </span>
                                 </div>
@@ -986,7 +986,7 @@ export default function LedgerPage() {
                                                 <>
                                                     <div className="flex items-start justify-between gap-4 px-4 py-3">
                                                         <dt className="text-sm text-main-500">Transfer Fee</dt>
-                                                        <dd className="text-sm font-semibold text-rose-600">{formatAmt(feeAmt)}</dd>
+                                                        <dd className="text-sm font-semibold text-danger-600">{formatAmt(feeAmt)}</dd>
                                                     </div>
                                                     <div className="flex items-start justify-between gap-4 px-4 py-3 bg-main-200/30">
                                                         <dt className="text-sm font-medium text-main-700">Total Deducted from Source</dt>
@@ -1017,14 +1017,14 @@ export default function LedgerPage() {
                                     </div>
                                 </dl>
 
-                                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                                <div className="rounded-lg border border-danger-300 bg-danger-50 p-4">
                                     <div className="flex items-start gap-2 mb-3">
-                                        <i className="bi bi-exclamation-triangle text-red-600 mt-0.5" />
+                                        <i className="bi bi-exclamation-triangle text-danger-600 mt-0.5" />
                                         <div>
-                                            <h5 className="font-semibold text-red-800">
+                                            <h5 className="font-semibold text-danger-800">
                                                 {viewingTransaction.transferId ? "Delete transfer" : "Delete transaction"}
                                             </h5>
-                                            <p className="text-xs text-red-700">
+                                            <p className="text-xs text-danger-700">
                                                 {viewingTransaction.transferId
                                                     ? "All linked transfer entries and associated fees will be permanently deleted. "
                                                     : "This transaction will be permanently deleted. "}
@@ -1033,7 +1033,7 @@ export default function LedgerPage() {
                                         </div>
                                     </div>
                                     <input
-                                        className="w-full px-3 py-2 border border-red-300 rounded-md bg-white text-main-800 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-3 py-2 border border-danger-300 rounded-md bg-main-0 text-main-800 focus:outline-none focus:ring-2 focus:ring-danger-500"
                                         value={deleteConfirmation}
                                         onChange={e => setDeleteConfirmation(e.target.value)}
                                         placeholder="DELETE"
@@ -1098,8 +1098,8 @@ export default function LedgerPage() {
                         {/* Explicit Transaction Type Selection */}
                         <div>
                             <div className="flex items-center justify-between mb-1.5">
-                                <label className="block text-xs font-semibold text-main-700 dark:text-main-300 uppercase tracking-wider">
-                                    Transaction Type <span className="text-red-500">*</span>
+                                <label className="block text-xs font-semibold text-main-700 uppercase tracking-wider">
+                                    Transaction Type <span className="text-danger-500">*</span>
                                 </label>
                                 <Link
                                     to="/finance/categories"
@@ -1210,7 +1210,7 @@ export default function LedgerPage() {
                         <div>
                             <div className="flex items-center justify-between mb-1">
                                 <label className="block text-sm font-medium text-main">
-                                    Category <span className="text-red-500">*</span>
+                                    Category <span className="text-danger-500">*</span>
                                 </label>
                                 <Link
                                     to="/finance/categories"
@@ -1245,7 +1245,7 @@ export default function LedgerPage() {
                         {/* Account Selection */}
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
-                                {formData.type === "transfer" ? "From Account" : "Associated Account"} <span className="text-red-500">*</span>
+                                {formData.type === "transfer" ? "From Account" : "Associated Account"} <span className="text-danger-500">*</span>
                             </label>
                             {accounts.length > 0 ? (
                                 <select
@@ -1262,9 +1262,9 @@ export default function LedgerPage() {
                                     ))}
                                 </select>
                             ) : (
-                                <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-300 text-sm flex flex-col gap-2">
+                                <div className="p-3.5 bg-accent-500/10 border border-accent-500/30 rounded-lg text-accent-700 text-sm flex flex-col gap-2">
                                     <div className="flex items-center gap-2 font-semibold">
-                                        <i className="bi bi-exclamation-triangle-fill text-amber-500" />
+                                        <i className="bi bi-exclamation-triangle-fill text-accent-500" />
                                         No Accounts Found
                                     </div>
                                     <p className="text-xs text-main-500">
@@ -1272,7 +1272,7 @@ export default function LedgerPage() {
                                     </p>
                                     <Link
                                         to="/finance/accounts"
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-xs font-medium rounded hover:bg-primary/90 transition-colors w-fit mt-1"
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-main-0 text-xs font-medium rounded hover:bg-primary/90 transition-colors w-fit mt-1"
                                     >
                                         <i className="bi bi-plus-lg" /> Create Account
                                     </Link>
@@ -1283,7 +1283,7 @@ export default function LedgerPage() {
                         {formData.type === "transfer" && (
                             <div>
                                 <label className="block text-sm font-medium text-main mb-1">
-                                    To Account <span className="text-red-500">*</span>
+                                    To Account <span className="text-danger-500">*</span>
                                 </label>
                                 <select
                                     className="w-full border border-main-300 rounded px-3 py-2 text-sm bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"

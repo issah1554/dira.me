@@ -129,7 +129,7 @@ export default function PartiesPage() {
 
     if (error) {
         return (
-            <div className="p-4 text-red-600 bg-red-50 rounded-lg">
+            <div className="p-4 text-danger-600 bg-danger-50 rounded-lg">
                 Error: {error}
                 <Button onClick={() => window.location.reload()} className="mt-2" color="success" size="lg">
                     Retry
@@ -313,7 +313,7 @@ export default function PartiesPage() {
 
                         <div>
                             <label className="block text-sm font-medium text-main mb-1">
-                                Party Type <span className="text-red-500">*</span>
+                                Party Type <span className="text-danger-500">*</span>
                             </label>
                             <select
                                 className="w-full px-3 py-2 border border-main-300 rounded-md bg-main-100 text-main focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer text-sm"

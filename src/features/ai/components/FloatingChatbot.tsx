@@ -100,13 +100,13 @@ export function FloatingChatbot() {
             {!isOpen && (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-primary via-indigo-600 to-purple-600 text-white rounded-full shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+                    className="flex items-center gap-2.5 px-4 py-3 bg-gradient-to-r from-primary via-indigo-600 to-purple-600 text-main-0 rounded-full shadow-xl hover:shadow-primary/30 hover:scale-105 active:scale-95 transition-all cursor-pointer group"
                     title="Open Dira AI Assistant"
                     aria-label="Open AI Assistant"
                 >
                     <div className="relative">
                         <i className="bi bi-stars text-lg animate-pulse" />
-                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-400 rounded-full ring-2 ring-white animate-ping" />
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-success-400 rounded-full ring-2 ring-main-0 animate-ping" />
                     </div>
                     <span className="text-sm font-bold tracking-wide">Dira AI</span>
                 </button>
@@ -114,22 +114,22 @@ export function FloatingChatbot() {
 
             {/* Chatbot Window */}
             {isOpen && (
-                <div className="w-[94vw] sm:w-[430px] h-[580px] max-h-[85vh] bg-main-100 dark:bg-main-200 border border-main-300 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
+                <div className="w-[94vw] sm:w-[430px] h-[580px] max-h-[85vh] bg-main-100 border border-main-300 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-fade-in">
                     {/* Header */}
-                    <div className="px-4 py-3 bg-gradient-to-r from-primary/95 via-indigo-600 to-purple-700 text-white flex items-center justify-between shadow-sm shrink-0">
+                    <div className="px-4 py-3 bg-gradient-to-r from-primary/95 via-indigo-600 to-purple-700 text-main-0 flex items-center justify-between shadow-sm shrink-0">
                         <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-                                <i className="bi bi-stars text-white text-base" />
+                            <div className="w-8 h-8 rounded-full bg-main-0/20 flex items-center justify-center">
+                                <i className="bi bi-stars text-main-0 text-base" />
                             </div>
                             <div>
                                 <div className="flex items-center gap-1.5">
                                     <h4 className="font-bold text-sm leading-tight">Dira AI</h4>
-                                    <span className="px-1.5 py-0.2 bg-white/20 text-white text-[9px] font-semibold rounded-full">
+                                    <span className="px-1.5 py-0.2 bg-main-0/20 text-main-0 text-[9px] font-semibold rounded-full">
                                         Multi-Model Engine
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-white/80 flex items-center gap-1">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+                                <p className="text-[10px] text-main-0/80 flex items-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-success-400 inline-block" />
                                     Live Financial Tools Connected
                                 </p>
                             </div>
@@ -138,7 +138,7 @@ export function FloatingChatbot() {
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={clearCurrentChat}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg text-main-0/80 hover:text-main-0 hover:bg-main-0/10 transition-colors cursor-pointer"
                                 title="Reset conversation"
                                 aria-label="Clear chat"
                             >
@@ -147,7 +147,7 @@ export function FloatingChatbot() {
                             <Link
                                 to="/ai/chat"
                                 onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                                className="p-1.5 rounded-lg text-main-0/80 hover:text-main-0 hover:bg-main-0/10 transition-colors"
                                 title="Expand to full screen"
                                 aria-label="Open Full Page AI"
                             >
@@ -155,7 +155,7 @@ export function FloatingChatbot() {
                             </Link>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                className="p-1.5 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                                className="p-1.5 rounded-lg text-main-0/80 hover:text-main-0 hover:bg-main-0/10 transition-colors cursor-pointer"
                                 title="Minimize"
                                 aria-label="Close chat"
                             >
@@ -165,7 +165,7 @@ export function FloatingChatbot() {
                     </div>
 
                     {/* Messages Thread */}
-                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-main-100 dark:bg-main-200">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-main-100">
                         {messages.map(msg => {
                             const isUser = msg.role === "user";
                             return (
@@ -182,7 +182,7 @@ export function FloatingChatbot() {
                                     <div
                                         className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-xs space-y-1.5 ${
                                             isUser
-                                                ? "bg-primary text-white rounded-tr-none shadow-sm"
+                                                ? "bg-primary text-main-0 rounded-tr-none shadow-sm"
                                                 : "bg-main-200/80 border border-main-300 text-main-800 rounded-tl-none shadow-sm"
                                         }`}
                                     >
@@ -206,7 +206,7 @@ export function FloatingChatbot() {
                                         <div
                                             className={`flex items-center justify-between text-[9px] pt-1 border-t ${
                                                 isUser
-                                                    ? "border-white/20 text-white/70"
+                                                    ? "border-main-0/20 text-main-0/70"
                                                     : "border-main-300/60 text-main-400"
                                             }`}
                                         >
@@ -254,7 +254,7 @@ export function FloatingChatbot() {
                         )}
 
                         {error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-600 dark:text-red-400 text-xs flex items-start gap-2">
+                            <div className="p-3 bg-danger-500/10 border border-danger-500/30 rounded-xl text-danger-600 text-xs flex items-start gap-2">
                                 <i className="bi bi-exclamation-triangle-fill text-sm mt-0.5 shrink-0" />
                                 <div>
                                     <p className="font-semibold">Notice</p>
@@ -301,7 +301,7 @@ export function FloatingChatbot() {
                         <button
                             type="submit"
                             disabled={loading || !input.trim()}
-                            className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer shrink-0"
+                            className="w-8 h-8 rounded-xl bg-primary text-main-0 flex items-center justify-center hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm cursor-pointer shrink-0"
                             aria-label="Send message"
                         >
                             {loading ? (
