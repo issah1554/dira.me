@@ -1,6 +1,7 @@
 // src/lib/offline/syncManager.ts
 import { supabase } from "../../supabase";
 import { offlineDb, type SyncQueueItem } from "./offlineDb";
+import { generateUUID, isValidUUID } from "../uuid";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type SyncEventListener = (event: {
@@ -103,8 +104,31 @@ class SyncManager {
                     }
                 }
             )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "transaction_categories" },
+                () => {
+                    if (this.isOnline() && !this.isSyncing) {
+                        this.refreshLocalCache(userId).then(() => {
+                            this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                        });
+                    }
+                }
+            )
+            .on(
+                "postgres_changes",
+                { event: "*", schema: "public", table: "transaction_types" },
+                () => {
+                    if (this.isOnline() && !this.isSyncing) {
+                        this.refreshLocalCache(userId).then(() => {
+                            this.notify({ type: "sync-complete", data: { lastSyncedAt: new Date() } });
+                        });
+                    }
+                }
+            )
             .subscribe();
     }
+
 
     private teardownRealtimeSubscription() {
         if (this.realtimeChannel) {
@@ -252,10 +276,25 @@ class SyncManager {
         const { table, action, recordId, payload, userId } = item;
         const supabaseTable = table === "categories" ? "transaction_categories" : table;
 
+        let finalRecordId = recordId;
+        let finalPayload = { ...payload };
+
+        // Self-heal: If an item in queue had a non-UUID ID, convert to valid UUID
+        if (!isValidUUID(recordId)) {
+            finalRecordId = generateUUID();
+            finalPayload = { ...payload, id: finalRecordId };
+            try {
+                await offlineDb.deleteItem(table, recordId);
+                await offlineDb.put(table, finalPayload);
+            } catch {
+                // Ignore local swap error if item was already deleted
+            }
+        }
+
         if (action === "insert") {
             const insertPayload = {
-                ...payload,
-                id: recordId,
+                ...finalPayload,
+                id: finalRecordId,
                 user_id: userId,
             };
 
@@ -266,21 +305,21 @@ class SyncManager {
             if (error) throw error;
         } else if (action === "update") {
             const updatePayload = {
-                ...payload,
+                ...finalPayload,
                 updated_at: new Date().toISOString(),
             };
 
             const { error } = await supabase
                 .from(supabaseTable)
                 .update(updatePayload)
-                .eq("id", recordId);
+                .eq("id", finalRecordId);
 
             if (error) throw error;
         } else if (action === "delete") {
             const { error } = await supabase
                 .from(supabaseTable)
                 .delete()
-                .eq("id", recordId);
+                .eq("id", finalRecordId);
 
             if (error) throw error;
         }
@@ -298,8 +337,7 @@ class SyncManager {
                 .eq("user_id", userId);
 
             if (!accountsErr && accountsData) {
-                await offlineDb.clearStore("accounts");
-                await offlineDb.putMany("accounts", accountsData);
+                await offlineDb.syncStore("accounts", accountsData);
             }
 
             // 2. Refresh Parties
@@ -309,8 +347,7 @@ class SyncManager {
                 .eq("user_id", userId);
 
             if (!partiesErr && partiesData) {
-                await offlineDb.clearStore("parties");
-                await offlineDb.putMany("parties", partiesData);
+                await offlineDb.syncStore("parties", partiesData);
             }
 
             // 3. Refresh Categories
@@ -320,8 +357,7 @@ class SyncManager {
                 .eq("user_id", userId);
 
             if (!categoriesErr && categoriesData) {
-                await offlineDb.clearStore("categories");
-                await offlineDb.putMany("categories", categoriesData);
+                await offlineDb.syncStore("categories", categoriesData);
             }
 
             // 4. Refresh Transaction Types
@@ -331,8 +367,7 @@ class SyncManager {
                 .eq("user_id", userId);
 
             if (!typesErr && typesData) {
-                await offlineDb.clearStore("transaction_types");
-                await offlineDb.putMany("transaction_types", typesData);
+                await offlineDb.syncStore("transaction_types", typesData);
             }
 
             // 5. Refresh Transactions
@@ -342,13 +377,13 @@ class SyncManager {
                 .order("date", { ascending: false });
 
             if (!txErr && txData) {
-                await offlineDb.clearStore("transactions");
-                await offlineDb.putMany("transactions", txData);
+                await offlineDb.syncStore("transactions", txData);
             }
         } catch (err) {
             console.error("Error refreshing local cache from Supabase:", err);
         }
     }
+
 }
 
 export const syncManager = new SyncManager();

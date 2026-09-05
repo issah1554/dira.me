@@ -4,6 +4,7 @@ import type { Party, PartyCreateDTO, PartyUpdateDTO, PartyType } from "../../../
 import type { Database } from "../../../types/database";
 import { offlineDb } from "../../../lib/offline/offlineDb";
 import { syncManager } from "../../../lib/offline/syncManager";
+import { generateUUID } from "../../../lib/uuid";
 
 type PartyRow = Database["public"]["Tables"]["parties"]["Row"];
 type PartyUpdate = Database["public"]["Tables"]["parties"]["Update"];
@@ -69,8 +70,7 @@ export const partyService = {
                     .order("name", { ascending: true });
 
                 if (!error && data) {
-                    await offlineDb.clearStore("parties");
-                    await offlineDb.putMany("parties", data);
+                    await offlineDb.syncStore("parties", data);
                     return (data || []).map(row => rowToParty(row as PartyRow));
                 }
             } catch (err) {
@@ -108,7 +108,7 @@ export const partyService = {
     async createParty(partyData: PartyCreateDTO, userId: string): Promise<Party> {
         return await syncManager.onUserMutation(async () => {
             const now = new Date().toISOString();
-            const partyId = crypto.randomUUID ? crypto.randomUUID() : `party_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const partyId = generateUUID();
 
             const newRow: PartyRow = {
                 id: partyId,

@@ -4,6 +4,7 @@ import type { Database, TransactionType } from "../../../types/database";
 import type { TransactionTypeItem, TransactionTypeCreateDTO, TransactionTypeUpdateDTO } from "../../../types/transactionType";
 import { offlineDb } from "../../../lib/offline/offlineDb";
 import { syncManager } from "../../../lib/offline/syncManager";
+import { generateUUID, isValidUUID } from "../../../lib/uuid";
 import { categoryColorStyles } from "./categoryService";
 
 type TransactionTypeRow = Database["public"]["Tables"]["transaction_types"]["Row"];
@@ -117,9 +118,19 @@ export const transactionTypeService = {
                             return await this.seedDefaultTypes(user.id);
                         }
 
-                        await offlineDb.clearStore("transaction_types");
-                        await offlineDb.putMany("transaction_types", data);
-                        return data.map(rowToTransactionType);
+                        // Safely reconcile local cache with Supabase without deleting un-synced items!
+                        await offlineDb.syncStore("transaction_types", data);
+
+                        // Clean up legacy type_def_... entries if any remain
+                        const updatedLocal = await offlineDb.getAll<TransactionTypeRow>("transaction_types");
+                        for (const item of updatedLocal) {
+                            if (String(item.id).startsWith("type_def_")) {
+                                await offlineDb.deleteItem("transaction_types", String(item.id));
+                            }
+                        }
+
+                        const finalLocal = await offlineDb.getAll<TransactionTypeRow>("transaction_types");
+                        return finalLocal.map(rowToTransactionType);
                     }
                 }
             } catch (err) {
@@ -137,8 +148,8 @@ export const transactionTypeService = {
 
     async seedDefaultTypes(userId: string): Promise<TransactionTypeItem[]> {
         const now = new Date().toISOString();
-        const rows: TransactionTypeRow[] = defaultTransactionTypes.map((t, i) => ({
-            id: `type_def_${i}_${t.code}`,
+        const rows: TransactionTypeRow[] = defaultTransactionTypes.map((t) => ({
+            id: generateUUID(),
             user_id: userId,
             code: t.code,
             label: t.label,
@@ -152,6 +163,14 @@ export const transactionTypeService = {
             updated_at: now,
         }));
 
+        // Clean up any legacy type_def_... items in IndexedDB
+        const cached = await offlineDb.getAll<TransactionTypeRow>("transaction_types");
+        for (const item of cached) {
+            if (String(item.id).startsWith("type_def_") || !isValidUUID(String(item.id))) {
+                await offlineDb.deleteItem("transaction_types", String(item.id));
+            }
+        }
+
         await offlineDb.putMany("transaction_types", rows);
 
         if (typeof navigator !== "undefined" && navigator.onLine && userId !== "local-user") {
@@ -161,23 +180,25 @@ export const transactionTypeService = {
                     .upsert(rows, { onConflict: "user_id,code" })
                     .select();
 
-                if (!error && data) {
+                if (!error && data && data.length > 0) {
                     await offlineDb.putMany("transaction_types", data);
-                    return data.map(rowToTransactionType);
+                    const allLocal = await offlineDb.getAll<TransactionTypeRow>("transaction_types");
+                    return allLocal.map(rowToTransactionType);
                 }
             } catch (err) {
                 console.warn("Could not sync default types to Supabase:", err);
             }
         }
 
-        return rows.map(rowToTransactionType);
+        const allLocal = await offlineDb.getAll<TransactionTypeRow>("transaction_types");
+        return allLocal.map(rowToTransactionType);
     },
 
     async create(payload: TransactionTypeCreateDTO): Promise<TransactionTypeItem> {
         return await syncManager.onUserMutation(async () => {
             const user = (await supabase.auth.getUser()).data.user;
             const now = new Date().toISOString();
-            const typeId = crypto.randomUUID ? crypto.randomUUID() : `type_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const typeId = generateUUID();
 
             const colorKey = payload.color || (payload.dc === "cr" ? "emerald" : "rose");
             const colorStyles = categoryColorStyles[colorKey] || categoryColorStyles.primary;
@@ -221,7 +242,7 @@ export const transactionTypeService = {
                         action: "insert",
                         recordId: typeId,
                         payload: newRow,
-                        userId: user?.id || "",
+                        userId: user.id,
                     });
                 }
             } else if (user?.id) {
@@ -237,6 +258,7 @@ export const transactionTypeService = {
             return rowToTransactionType(newRow);
         });
     },
+
 
     async update(id: string, payload: TransactionTypeUpdateDTO): Promise<void> {
         return await syncManager.onUserMutation(async () => {

@@ -4,6 +4,7 @@ import type { Database } from "../../../types/database";
 import type { TransactionCategory, CategoryCreateDTO, CategoryUpdateDTO } from "../../../types/category";
 import { offlineDb } from "../../../lib/offline/offlineDb";
 import { syncManager } from "../../../lib/offline/syncManager";
+import { generateUUID, isValidUUID } from "../../../lib/uuid";
 
 type CategoryRow = Database["public"]["Tables"]["transaction_categories"]["Row"];
 
@@ -234,13 +235,23 @@ export const categoryService = {
                     if (!error && data) {
                         // If user has zero categories online, seed defaults automatically
                         if (data.length === 0) {
-                            const seeded = await this.seedDefaultCategories(user.id);
-                            return seeded;
+                            return await this.seedDefaultCategories(user.id);
                         }
 
-                        await offlineDb.clearStore("categories");
-                        await offlineDb.putMany("categories", data);
-                        return data.map(rowToCategory);
+                        // Safely reconcile local cache with Supabase without deleting un-synced items!
+                        await offlineDb.syncStore("categories", data);
+
+                        // Clean up legacy cat_def_... entries if any remain
+                        const updatedLocal = await offlineDb.getAll<CategoryRow>("categories");
+                        for (const item of updatedLocal) {
+                            if (item.id.startsWith("cat_def_")) {
+                                await offlineDb.deleteItem("categories", item.id);
+                            }
+                        }
+
+                        const finalLocal = await offlineDb.getAll<CategoryRow>("categories");
+                        finalLocal.sort((a, b) => a.name.localeCompare(b.name));
+                        return finalLocal.map(rowToCategory);
                     }
                 }
             } catch (err) {
@@ -260,8 +271,8 @@ export const categoryService = {
 
     async seedDefaultCategories(userId: string): Promise<TransactionCategory[]> {
         const now = new Date().toISOString();
-        const rows: CategoryRow[] = defaultTransactionCategories.map((cat, i) => ({
-            id: `cat_def_${i}_${cat.name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`,
+        const rows: CategoryRow[] = defaultTransactionCategories.map((cat) => ({
+            id: generateUUID(),
             user_id: userId,
             name: cat.name,
             description: cat.description || "",
@@ -272,6 +283,14 @@ export const categoryService = {
             updated_at: now,
         }));
 
+        // Clean up any legacy cat_def_... items in IndexedDB
+        const cached = await offlineDb.getAll<CategoryRow>("categories");
+        for (const item of cached) {
+            if (item.id.startsWith("cat_def_") || !isValidUUID(item.id)) {
+                await offlineDb.deleteItem("categories", item.id);
+            }
+        }
+
         await offlineDb.putMany("categories", rows);
 
         if (typeof navigator !== "undefined" && navigator.onLine && userId !== "local-user") {
@@ -281,23 +300,27 @@ export const categoryService = {
                     .upsert(rows, { onConflict: "user_id,name" })
                     .select();
 
-                if (!error && data) {
+                if (!error && data && data.length > 0) {
                     await offlineDb.putMany("categories", data);
-                    return data.map(rowToCategory);
+                    const allLocal = await offlineDb.getAll<CategoryRow>("categories");
+                    allLocal.sort((a, b) => a.name.localeCompare(b.name));
+                    return allLocal.map(rowToCategory);
                 }
             } catch (err) {
                 console.warn("Could not sync seeded categories to Supabase:", err);
             }
         }
 
-        return rows.map(rowToCategory);
+        const allLocal = await offlineDb.getAll<CategoryRow>("categories");
+        allLocal.sort((a, b) => a.name.localeCompare(b.name));
+        return allLocal.map(rowToCategory);
     },
 
     async create(payload: CategoryCreateDTO): Promise<TransactionCategory> {
         return await syncManager.onUserMutation(async () => {
             const user = (await supabase.auth.getUser()).data.user;
             const now = new Date().toISOString();
-            const catId = crypto.randomUUID ? crypto.randomUUID() : `cat_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const catId = generateUUID();
 
             const newRow: CategoryRow = {
                 id: catId,
@@ -333,7 +356,7 @@ export const categoryService = {
                         action: "insert",
                         recordId: catId,
                         payload: newRow,
-                        userId: user?.id || "",
+                        userId: user.id,
                     });
                 }
             } else if (user?.id) {
@@ -349,6 +372,7 @@ export const categoryService = {
             return rowToCategory(newRow);
         });
     },
+
 
     async update(id: string, payload: CategoryUpdateDTO): Promise<void> {
         return await syncManager.onUserMutation(async () => {

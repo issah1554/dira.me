@@ -1,4 +1,5 @@
 // src/lib/offline/offlineDb.ts
+import { generateUUID } from "../uuid";
 
 export type SyncAction = "insert" | "update" | "delete";
 export type SyncTable = "accounts" | "transactions" | "parties" | "categories" | "transaction_types";
@@ -136,6 +137,48 @@ export const offlineDb = {
         });
     },
 
+    /**
+     * Safely reconciles a local store with server items.
+     * Unlike clearStore, it NEVER deletes items that are currently pending in sync_queue,
+     * protecting offline/un-synced creations and edits from being wiped.
+     */
+    async syncStore<T extends { id: string }>(storeName: SyncTable, serverItems: T[]): Promise<void> {
+        const db = await openDB();
+
+        // 1. Get pending sync queue IDs for this store
+        const queueItems = await this.getSyncQueue();
+        const pendingIds = new Set(
+            queueItems.filter((q) => q.table === storeName).map((q) => q.recordId)
+        );
+
+        // 2. Read existing local items
+        const localItems = await this.getAll<T>(storeName);
+        const serverIdSet = new Set(serverItems.map((item) => item.id));
+
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(storeName, "readwrite");
+            const store = tx.objectStore(storeName);
+
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+
+            // Remove local items that are absent from the server UNLESS they are waiting to sync
+            for (const local of localItems) {
+                if (!serverIdSet.has(local.id)) {
+                    // Do not delete un-synced/pending local records!
+                    if (!pendingIds.has(local.id)) {
+                        store.delete(local.id);
+                    }
+                }
+            }
+
+            // Put all server items into store
+            for (const serverItem of serverItems) {
+                store.put(serverItem);
+            }
+        });
+    },
+
     async clearStore(storeName: string): Promise<void> {
         const db = await openDB();
         return new Promise((resolve, reject) => {
@@ -155,7 +198,7 @@ export const offlineDb = {
     async addToSyncQueue(item: Omit<SyncQueueItem, "id" | "createdAt" | "attempts">): Promise<SyncQueueItem> {
         const queueItem: SyncQueueItem = {
             ...item,
-            id: crypto.randomUUID ? crypto.randomUUID() : `queue_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            id: generateUUID(),
             createdAt: new Date().toISOString(),
             attempts: 0,
         };
@@ -170,6 +213,7 @@ export const offlineDb = {
             request.onerror = () => reject(request.error);
         });
     },
+
 
     async getSyncQueue(): Promise<SyncQueueItem[]> {
         const db = await openDB();

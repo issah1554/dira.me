@@ -116,6 +116,7 @@ export default function LedgerPage() {
         account: "",
         toAccount: "",
         party_id: "" as string | null,
+        categoryId: null as string | null,
         category: "General",
         notes: "",
     });
@@ -133,6 +134,7 @@ export default function LedgerPage() {
             account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
+            categoryId: null,
             category: "General",
             notes: "",
         });
@@ -150,11 +152,13 @@ export default function LedgerPage() {
             account: accounts.length > 0 ? accounts[0].id : "",
             toAccount: "",
             party_id: null,
+            categoryId: null,
             category: "General",
             notes: "",
         });
         setOpen(true);
     };
+
 
     const handleOpenEdit = (tx: Transaction) => {
         setEditingId(tx.id);
@@ -192,6 +196,12 @@ export default function LedgerPage() {
             ? (transferFrom?.notes || transferTo?.notes || tx.notes)
             : tx.notes;
 
+        const matchedCat = categories.find(c =>
+            (tx.categoryId && c.id === tx.categoryId) ||
+            (tx.category_id && c.id === tx.category_id) ||
+            c.name.toLowerCase() === (tx.category || "").toLowerCase()
+        );
+
         setFormData({
             date: dateVal,
             time: timeVal,
@@ -201,11 +211,13 @@ export default function LedgerPage() {
             account: transferFrom?.accountId || tx.accountId,
             toAccount: transferTo?.accountId || "",
             party_id: tx.party_id || null,
-            category: tx.category || "General",
+            categoryId: matchedCat ? matchedCat.id : (tx.categoryId || tx.category_id || null),
+            category: matchedCat ? matchedCat.name : (tx.category || "General"),
             notes: notesVal || "",
         });
         setOpen(true);
     };
+
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -294,6 +306,11 @@ export default function LedgerPage() {
 
         const dc = transactionTypeConfig[formData.type].dc;
 
+        const selectedCat = categories.find(c =>
+            (formData.categoryId && c.id === formData.categoryId) ||
+            c.name.toLowerCase() === (formData.category || "").trim().toLowerCase()
+        );
+
         const payload = {
             date: fullIsoDate,
             amount: amt,
@@ -301,8 +318,9 @@ export default function LedgerPage() {
             dc,
             accountId: formData.account,
             party_id: formData.party_id || null,
+            categoryId: selectedCat?.id || formData.categoryId || null,
             currency,
-            category: formData.category || "General",
+            category: selectedCat?.name || formData.category || "General",
             notes: formData.notes,
             status: "completed" as const,
         };
@@ -312,6 +330,7 @@ export default function LedgerPage() {
         } else {
             await createTransaction(payload);
         }
+
 
         // Refresh accounts so calculated balance updates immediately
         loadAccounts();
@@ -562,15 +581,20 @@ export default function LedgerPage() {
             sortable: true,
             priority: 7,
             render: row => {
-                const matchedCategory = categories.find(c => c.name.toLowerCase() === (row.category || "").toLowerCase());
+                const matchedCategory = categories.find(c =>
+                    (row.categoryId && c.id === row.categoryId) ||
+                    (row.category_id && c.id === row.category_id) ||
+                    c.name.toLowerCase() === (row.category || "").toLowerCase()
+                );
                 const style = categoryColorStyles[matchedCategory?.color || "neutral"] || categoryColorStyles.neutral;
                 return (
                     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-medium ${style.badge}`}>
                         <i className={`bi ${matchedCategory?.icon || "bi-tag"} text-xs`} />
-                        {row.category || "General"}
+                        {matchedCategory?.name || row.category || "General"}
                     </span>
                 );
             },
+
         },
 
         { key: "notes", header: "Notes", priority: 5 },
@@ -1220,7 +1244,14 @@ export default function LedgerPage() {
                             <SearchableSelect
                                 placeholder="Search category (e.g. Salary, Food, Housing, Fuel)..."
                                 value={formData.category || null}
-                                onChange={val => setFormData(p => ({ ...p, category: val || "General" }))}
+                                onChange={val => {
+                                    const matched = categories.find(c => c.name.toLowerCase() === (val || "").trim().toLowerCase());
+                                    setFormData(p => ({
+                                        ...p,
+                                        category: val || "General",
+                                        categoryId: matched ? matched.id : null,
+                                    }));
+                                }}
                                 options={categoryOptions}
                                 allowCustom={true}
                                 onAddNew={() => navigate("/finance/categories")}

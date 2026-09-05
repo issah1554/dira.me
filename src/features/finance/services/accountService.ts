@@ -3,6 +3,7 @@ import type { Account, AccountCreateDTO, AccountUpdateDTO, CurrencyCode } from "
 import type { Database } from "../../../types/database";
 import { offlineDb } from "../../../lib/offline/offlineDb";
 import { syncManager } from "../../../lib/offline/syncManager";
+import { generateUUID } from "../../../lib/uuid";
 
 type AccountRow = Database["public"]["Tables"]["accounts"]["Row"];
 type AccountUpdate = Database["public"]["Tables"]["accounts"]["Update"];
@@ -110,7 +111,7 @@ export const accountService = {
             const openingBal = parseFloat(String(accountData.openingBalance || "0")) || 0;
             const currency: CurrencyCode = accountData.currency || "TZS";
             const now = new Date().toISOString();
-            const accountId = crypto.randomUUID ? crypto.randomUUID() : `acc_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const accountId = generateUUID();
 
             const newAccountRow: AccountRow = {
                 id: accountId,
@@ -185,13 +186,11 @@ export const accountService = {
                 ]);
 
                 if (!accountsResult.error && accountsResult.data) {
-                    // Update cache
-                    await offlineDb.clearStore("accounts");
-                    await offlineDb.putMany("accounts", accountsResult.data);
+                    // Update cache safely
+                    await offlineDb.syncStore("accounts", accountsResult.data);
 
                     if (!transactionsResult.error && transactionsResult.data) {
-                        await offlineDb.clearStore("transactions");
-                        await offlineDb.putMany("transactions", transactionsResult.data);
+                        await offlineDb.syncStore("transactions", transactionsResult.data);
                     }
 
                     return computeAccountBalances(accountsResult.data as AccountRow[], transactionsResult.data || []);

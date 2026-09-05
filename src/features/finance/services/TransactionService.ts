@@ -4,6 +4,7 @@ import type { CurrencyCode } from "../../../types/account";
 import type { Database, TransactionType } from "../../../types/database";
 import { offlineDb } from "../../../lib/offline/offlineDb";
 import { syncManager } from "../../../lib/offline/syncManager";
+import { generateUUID } from "../../../lib/uuid";
 
 type TransactionRow = Database["public"]["Tables"]["transactions"]["Row"];
 type TransactionUpdate = Database["public"]["Tables"]["transactions"]["Update"];
@@ -85,6 +86,8 @@ export type TransactionDTO = {
     dc?: "dr" | "cr";
     accountId: string;
     party_id?: string | null;
+    categoryId?: string | null;
+    category_id?: string | null;
     currency?: CurrencyCode;
     notes: string;
     category: string;
@@ -126,6 +129,8 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         dc,
         accountId: row.account_id,
         party_id: row.party_id || null,
+        categoryId: row.category_id || null,
+        category_id: row.category_id || null,
         transferId: row.transfer_id || null,
         currency: (row.currency as CurrencyCode) || "TZS",
         notes: row.notes || "",
@@ -134,6 +139,7 @@ const rowToTransaction = (row: TransactionRow): Transaction => {
         userId: row.user_id,
     };
 };
+
 
 /* =======================
    Service
@@ -152,8 +158,7 @@ export const TransactionService = {
                     .order("date", { ascending: false });
 
                 if (!error && data) {
-                    await offlineDb.clearStore("transactions");
-                    await offlineDb.putMany("transactions", data);
+                    await offlineDb.syncStore("transactions", data);
                     return data.map((row) => rowToTransaction(row as TransactionRow));
                 }
             } catch (err) {
@@ -169,11 +174,19 @@ export const TransactionService = {
         return await syncManager.onUserMutation(async () => {
             const user = (await supabase.auth.getUser()).data.user;
             const now = new Date().toISOString();
-            const txId = crypto.randomUUID ? crypto.randomUUID() : `tx_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+            const txId = generateUUID();
 
             const type = payload.type || (payload.dc === "cr" ? "income" : "expense");
             const isCashIn = type === "income" || type === "borrow" || type === "collection";
             const dc = payload.dc || (isCashIn ? "cr" : "dr");
+
+            // Resolve category_id: use provided ID or resolve from category name in local DB
+            let categoryId = payload.categoryId || payload.category_id || null;
+            if (!categoryId && payload.category) {
+                const cachedCats = await offlineDb.getAll<{ id: string; name: string }>("categories");
+                const matched = cachedCats.find(c => c.name.toLowerCase() === payload.category.trim().toLowerCase());
+                if (matched) categoryId = matched.id;
+            }
 
             const newRow: TransactionRow = {
                 id: txId,
@@ -184,6 +197,7 @@ export const TransactionService = {
                 dc,
                 account_id: payload.accountId,
                 party_id: payload.party_id || null,
+                category_id: categoryId,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
                 category: payload.category || "",
@@ -240,14 +254,21 @@ export const TransactionService = {
             if (payload.fromAccount === payload.toAccount) throw new Error("Transfer accounts must be different");
 
             const now = new Date().toISOString();
-            const transferId = crypto.randomUUID();
+            const transferId = generateUUID();
             const date = payload.date ? new Date(payload.date).toISOString() : now;
+
+            // Resolve category IDs for Transfer and Fees
+            const cachedCats = await offlineDb.getAll<{ id: string; name: string }>("categories");
+            const transferCatId = cachedCats.find(c => c.name.toLowerCase() === "transfer")?.id || null;
+            const feeCatId = cachedCats.find(c => c.name.toLowerCase() === "fees")?.id || null;
+
             const base = {
                 user_id: user.id,
                 date,
                 amount: payload.amount,
                 type: "transfer" as const,
                 party_id: null,
+                category_id: transferCatId,
                 transfer_id: transferId,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
@@ -257,8 +278,8 @@ export const TransactionService = {
                 updated_at: now,
             };
             const rows: TransactionRow[] = [
-                { ...base, id: crypto.randomUUID(), dc: "dr", account_id: payload.fromAccount },
-                { ...base, id: crypto.randomUUID(), dc: "cr", account_id: payload.toAccount },
+                { ...base, id: generateUUID(), dc: "dr", account_id: payload.fromAccount },
+                { ...base, id: generateUUID(), dc: "cr", account_id: payload.toAccount },
             ];
 
             if (payload.fee && payload.fee > 0) {
@@ -266,7 +287,7 @@ export const TransactionService = {
                     ? `Transfer fee • ${payload.notes}`
                     : "Transfer fee";
                 rows.push({
-                    id: crypto.randomUUID(),
+                    id: generateUUID(),
                     user_id: user.id,
                     date,
                     amount: payload.fee,
@@ -274,6 +295,7 @@ export const TransactionService = {
                     dc: "dr",
                     account_id: payload.fromAccount,
                     party_id: null,
+                    category_id: feeCatId,
                     transfer_id: transferId,
                     currency: payload.currency || "TZS",
                     notes: feeNotes,
@@ -283,6 +305,7 @@ export const TransactionService = {
                     updated_at: now,
                 });
             }
+
 
             await offlineDb.putMany("transactions", rows);
 
@@ -336,6 +359,11 @@ export const TransactionService = {
             const now = new Date().toISOString();
             const date = new Date(payload.date).toISOString();
 
+            // Resolve category IDs for Transfer and Fees
+            const cachedCats = await offlineDb.getAll<{ id: string; name: string }>("categories");
+            const transferCatId = cachedCats.find(c => c.name.toLowerCase() === "transfer")?.id || null;
+            const feeCatId = cachedCats.find(c => c.name.toLowerCase() === "fees")?.id || null;
+
             const updatedFromRow: TransactionRow = {
                 ...fromRow,
                 date,
@@ -343,6 +371,7 @@ export const TransactionService = {
                 type: "transfer",
                 dc: "dr",
                 account_id: payload.fromAccount,
+                category_id: transferCatId,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
                 category: payload.category || "Transfer",
@@ -357,6 +386,7 @@ export const TransactionService = {
                 type: "transfer",
                 dc: "cr",
                 account_id: payload.toAccount,
+                category_id: transferCatId,
                 currency: payload.currency || "TZS",
                 notes: payload.notes || "",
                 category: payload.category || "Transfer",
@@ -380,6 +410,7 @@ export const TransactionService = {
                         type: "expense",
                         dc: "dr",
                         account_id: payload.fromAccount,
+                        category_id: feeCatId,
                         currency: payload.currency || "TZS",
                         notes: feeNotes,
                         category: "Fees",
@@ -388,7 +419,7 @@ export const TransactionService = {
                     });
                 } else {
                     rowsToSave.push({
-                        id: crypto.randomUUID(),
+                        id: generateUUID(),
                         user_id: fromRow.user_id,
                         date,
                         amount: payload.fee,
@@ -396,6 +427,7 @@ export const TransactionService = {
                         dc: "dr",
                         account_id: payload.fromAccount,
                         party_id: null,
+                        category_id: feeCatId,
                         transfer_id: transferId,
                         currency: payload.currency || "TZS",
                         notes: feeNotes,
@@ -500,6 +532,13 @@ export const TransactionService = {
             if (payload.currency !== undefined) updateData.currency = payload.currency;
             if (payload.notes !== undefined) updateData.notes = payload.notes;
             if (payload.category !== undefined) updateData.category = payload.category;
+            if (payload.categoryId !== undefined || payload.category_id !== undefined) {
+                updateData.category_id = payload.categoryId ?? payload.category_id ?? null;
+            } else if (payload.category !== undefined) {
+                const cachedCats = await offlineDb.getAll<{ id: string; name: string }>("categories");
+                const matched = cachedCats.find(c => c.name.toLowerCase() === (payload.category || "").trim().toLowerCase());
+                updateData.category_id = matched ? matched.id : null;
+            }
             if (payload.status !== undefined) updateData.status = payload.status;
 
             // 1. Update IndexedDB immediately
