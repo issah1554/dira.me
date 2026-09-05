@@ -982,18 +982,16 @@ export default function LedgerPage() {
                                                 <dt className="text-sm text-main-500">Transfer Amount</dt>
                                                 <dd className="text-sm font-semibold text-main-800">{formatAmt(transferAmt)}</dd>
                                             </div>
-                                            {feeAmt > 0 && (
-                                                <>
-                                                    <div className="flex items-start justify-between gap-4 px-4 py-3">
-                                                        <dt className="text-sm text-main-500">Transfer Fee</dt>
-                                                        <dd className="text-sm font-semibold text-danger-600">{formatAmt(feeAmt)}</dd>
-                                                    </div>
-                                                    <div className="flex items-start justify-between gap-4 px-4 py-3 bg-main-200/30">
-                                                        <dt className="text-sm font-medium text-main-700">Total Deducted from Source</dt>
-                                                        <dd className="text-sm font-bold text-main-900">{formatAmt(totalOutflow)}</dd>
-                                                    </div>
-                                                </>
-                                            )}
+                                            <div className="flex items-start justify-between gap-4 px-4 py-3">
+                                                <dt className="text-sm text-main-500">Transfer Fee</dt>
+                                                <dd className={`text-sm font-semibold ${feeAmt > 0 ? "text-danger-600" : "text-main-500"}`}>
+                                                    {feeAmt > 0 ? formatAmt(feeAmt) : (isUSD ? "$ 0.00" : "0.00 TZS")}
+                                                </dd>
+                                            </div>
+                                            <div className="flex items-start justify-between gap-4 px-4 py-3 bg-main-200/30">
+                                                <dt className="text-sm font-medium text-main-700">Total Deducted from Source</dt>
+                                                <dd className="text-sm font-bold text-main-900">{formatAmt(totalOutflow)}</dd>
+                                            </div>
                                         </>
                                     ) : (
                                         <div className="flex items-start justify-between gap-4 px-4 py-3">

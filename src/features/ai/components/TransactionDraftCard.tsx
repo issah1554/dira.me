@@ -88,12 +88,12 @@ export function TransactionDraftCard({
                     </div>
                 )}
 
-                {isTransfer && Boolean(draft.fee && draft.fee > 0) && (
+                {isTransfer && (
                     <div>
                         <span className="text-[10px] text-main-400 block font-medium">Transfer Fee:</span>
-                        <span className="font-semibold text-danger-600 flex items-center gap-1 truncate">
-                            <i className="bi bi-credit-card text-danger-500 text-[10px]" />
-                            {draft.fee!.toLocaleString()} TZS
+                        <span className={`font-semibold flex items-center gap-1 truncate ${draft.fee && draft.fee > 0 ? "text-danger-600" : "text-main-500"}`}>
+                            <i className={`bi bi-credit-card text-[10px] ${draft.fee && draft.fee > 0 ? "text-danger-500" : "text-main-400"}`} />
+                            {draft.fee && draft.fee > 0 ? `${draft.fee.toLocaleString()} TZS` : "0.00 TZS"}
                         </span>
                     </div>
                 )}
